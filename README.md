@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![FakeCall Logo](.github/assets/logo.png) <!-- TODO: Add an actual project logo/icon -->
+![FakeCall Logo](https://github.com/DDOneApps/FakeCall/blob/main/1831922.svg) 
 
 [![GitHub stars](https://img.shields.io/github/stars/DDOneApps/FakeCall?style=for-the-badge)](https://github.com/DDOneApps/FakeCall/stargazers) [![GitHub forks](https://img.shields.io/github/forks/DDOneApps/FakeCall?style=for-the-badge)](https://github.com/DDOneApps/FakeCall/network) [![GitHub issues](https://img.shields.io/github/issues/DDOneApps/FakeCall?style=for-the-badge)](https://github.com/DDOneApps/FakeCall/issues)
 
