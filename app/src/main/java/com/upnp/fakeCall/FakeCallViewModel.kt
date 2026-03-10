@@ -1,10 +1,12 @@
 package com.upnp.fakeCall
 
 import android.app.Application
+import android.os.Build
 import android.content.Intent
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.DocumentsContract
+import android.provider.Settings
 import android.telecom.TelecomManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -15,12 +17,36 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+
+enum class ScheduleKind {
+    PRESET,
+    CUSTOM_COUNTDOWN,
+    CUSTOM_EXACT
+}
+
+data class CustomPreset(
+    val kind: ScheduleKind,
+    val minutes: Int = 0,
+    val seconds: Int = 0,
+    val hour: Int = 0,
+    val minute: Int = 0
+)
 
 data class FakeCallUiState(
     val providerName: String = "Fake Call Provider",
     val callerName: String = "",
     val callerNumber: String = "",
     val selectedDelaySeconds: Int = 10,
+    val scheduleKind: ScheduleKind = ScheduleKind.PRESET,
+    val customCountdownMinutes: Int = 2,
+    val customCountdownSeconds: Int = 30,
+    val customExactHour: Int = 14,
+    val customExactMinute: Int = 45,
+    val customPresets: List<CustomPreset> = emptyList(),
     val selectedAudioUri: String = "",
     val selectedAudioName: String = "Default",
     val hasRequiredPermissions: Boolean = false,
@@ -43,6 +69,16 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
             callerName = prefs.getString(KEY_CALLER_NAME, "").orEmpty(),
             callerNumber = prefs.getString(KEY_CALLER_NUMBER, "").orEmpty(),
             selectedDelaySeconds = prefs.getInt(KEY_DELAY_SECONDS, 10),
+            scheduleKind = runCatching {
+                ScheduleKind.valueOf(
+                    prefs.getString(KEY_SCHEDULE_KIND, ScheduleKind.PRESET.name).orEmpty()
+                )
+            }.getOrDefault(ScheduleKind.PRESET),
+            customCountdownMinutes = prefs.getInt(KEY_CUSTOM_COUNTDOWN_MINUTES, 2),
+            customCountdownSeconds = prefs.getInt(KEY_CUSTOM_COUNTDOWN_SECONDS, 30),
+            customExactHour = prefs.getInt(KEY_CUSTOM_EXACT_HOUR, 14),
+            customExactMinute = prefs.getInt(KEY_CUSTOM_EXACT_MINUTE, 45),
+            customPresets = parseCustomPresets(prefs.getString(KEY_CUSTOM_PRESETS, "").orEmpty()),
             selectedAudioUri = prefs.getString(KEY_AUDIO_URI, "").orEmpty(),
             selectedAudioName = prefs.getString(KEY_AUDIO_NAME, "Default").orEmpty(),
             timerEndsAtMillis = prefs.getLong(KEY_TIMER_ENDS_AT, 0L),
@@ -94,8 +130,113 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun onDelaySelected(delaySeconds: Int) {
-        _uiState.update { it.copy(selectedDelaySeconds = delaySeconds) }
-        prefs.edit().putInt(KEY_DELAY_SECONDS, delaySeconds).apply()
+        _uiState.update {
+            it.copy(
+                selectedDelaySeconds = delaySeconds,
+                scheduleKind = ScheduleKind.PRESET
+            )
+        }
+        prefs.edit()
+            .putInt(KEY_DELAY_SECONDS, delaySeconds)
+            .putString(KEY_SCHEDULE_KIND, ScheduleKind.PRESET.name)
+            .apply()
+    }
+
+    fun onScheduleKindSelected(kind: ScheduleKind) {
+        _uiState.update { it.copy(scheduleKind = kind) }
+        prefs.edit().putString(KEY_SCHEDULE_KIND, kind.name).apply()
+    }
+
+    fun onCustomCountdownChange(minutes: Int, seconds: Int) {
+        val normalizedMinutes = minutes.coerceIn(0, 59)
+        val normalizedSeconds = seconds.coerceIn(0, 59)
+        _uiState.update {
+            it.copy(
+                customCountdownMinutes = normalizedMinutes,
+                customCountdownSeconds = normalizedSeconds
+            )
+        }
+        prefs.edit()
+            .putInt(KEY_CUSTOM_COUNTDOWN_MINUTES, normalizedMinutes)
+            .putInt(KEY_CUSTOM_COUNTDOWN_SECONDS, normalizedSeconds)
+            .apply()
+    }
+
+    fun onCustomExactTimeChange(hour: Int, minute: Int) {
+        val normalizedHour = hour.coerceIn(0, 23)
+        val normalizedMinute = minute.coerceIn(0, 59)
+        _uiState.update {
+            it.copy(
+                customExactHour = normalizedHour,
+                customExactMinute = normalizedMinute
+            )
+        }
+        prefs.edit()
+            .putInt(KEY_CUSTOM_EXACT_HOUR, normalizedHour)
+            .putInt(KEY_CUSTOM_EXACT_MINUTE, normalizedMinute)
+            .apply()
+    }
+
+    fun addCustomPreset(kind: ScheduleKind) {
+        val state = uiState.value
+        val preset = when (kind) {
+            ScheduleKind.CUSTOM_COUNTDOWN -> {
+                val minutes = state.customCountdownMinutes.coerceIn(0, 59)
+                val seconds = state.customCountdownSeconds.coerceIn(0, 59)
+                CustomPreset(kind = kind, minutes = minutes, seconds = seconds)
+            }
+            ScheduleKind.CUSTOM_EXACT -> {
+                val hour = state.customExactHour.coerceIn(0, 23)
+                val minute = state.customExactMinute.coerceIn(0, 59)
+                CustomPreset(kind = kind, hour = hour, minute = minute)
+            }
+            ScheduleKind.PRESET -> return
+        }
+
+        val existing = state.customPresets.toMutableList()
+        if (existing.any { it == preset }) {
+            _uiState.update { it.copy(statusMessage = "Preset already saved.") }
+            return
+        }
+        existing.add(0, preset)
+
+        prefs.edit()
+            .putString(KEY_CUSTOM_PRESETS, serializeCustomPresets(existing))
+            .apply()
+
+        _uiState.update {
+            it.copy(
+                customPresets = existing,
+                statusMessage = "Custom preset saved."
+            )
+        }
+    }
+
+    fun onCustomPresetSelected(preset: CustomPreset) {
+        when (preset.kind) {
+            ScheduleKind.CUSTOM_COUNTDOWN -> {
+                onCustomCountdownChange(preset.minutes, preset.seconds)
+                onScheduleKindSelected(ScheduleKind.CUSTOM_COUNTDOWN)
+            }
+            ScheduleKind.CUSTOM_EXACT -> {
+                onCustomExactTimeChange(preset.hour, preset.minute)
+                onScheduleKindSelected(ScheduleKind.CUSTOM_EXACT)
+            }
+            else -> Unit
+        }
+    }
+
+    fun removeCustomPreset(preset: CustomPreset) {
+        val updated = uiState.value.customPresets.filterNot { it == preset }
+        prefs.edit()
+            .putString(KEY_CUSTOM_PRESETS, serializeCustomPresets(updated))
+            .apply()
+        _uiState.update {
+            it.copy(
+                customPresets = updated,
+                statusMessage = "Preset removed."
+            )
+        }
     }
 
     fun onAudioFileSelected(uri: Uri?) {
@@ -229,6 +370,21 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
         return Intent(TelecomManager.ACTION_CHANGE_PHONE_ACCOUNTS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 
+    fun canScheduleExactAlarms(): Boolean {
+        return FakeCallAlarmScheduler.canScheduleExact(getApplication())
+    }
+
+    fun openExactAlarmSettingsIntent(): Intent {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                data = Uri.parse("package:${getApplication<Application>().packageName}")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        } else {
+            Intent()
+        }
+    }
+
     fun onTriggerOrCancelClicked() {
         if (uiState.value.isTimerRunning) {
             cancelTimer()
@@ -261,38 +417,73 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
             .putString(KEY_CALLER_NUMBER, number)
             .apply()
 
-        FakeCallSchedulerService.start(
-            context = getApplication(),
-            delaySeconds = state.selectedDelaySeconds,
-            callerName = state.callerName,
-            callerNumber = number,
-            providerName = state.providerName
-        )
+        val now = System.currentTimeMillis()
+        val selectedDelaySeconds = when (state.scheduleKind) {
+            ScheduleKind.PRESET -> state.selectedDelaySeconds
+            ScheduleKind.CUSTOM_COUNTDOWN -> customCountdownSeconds(state)
+            ScheduleKind.CUSTOM_EXACT -> 0
+        }
 
-        if (state.selectedDelaySeconds > 0) {
-            val endsAt = System.currentTimeMillis() + state.selectedDelaySeconds * 1_000L
-            prefs.edit().putLong(KEY_TIMER_ENDS_AT, endsAt).apply()
-            _uiState.update {
-                it.copy(
-                    isTimerRunning = true,
-                    timerEndsAtMillis = endsAt,
-                    statusMessage = "Timer started for ${formatDelay(state.selectedDelaySeconds)}."
-                )
+        val triggerAtMillis = when (state.scheduleKind) {
+            ScheduleKind.CUSTOM_EXACT -> computeNextExactTriggerMillis(
+                state.customExactHour,
+                state.customExactMinute
+            )
+            else -> now + selectedDelaySeconds * 1_000L
+        }
+
+        if (triggerAtMillis <= now + 1_000L) {
+            val telecomHelper = TelecomHelper(getApplication())
+            telecomHelper.registerOrUpdatePhoneAccount(state.providerName)
+            val triggered = if (telecomHelper.isAccountEnabled()) {
+                telecomHelper.triggerIncomingCall(state.callerName, number)
+            } else {
+                false
             }
-        } else {
+
             prefs.edit().remove(KEY_TIMER_ENDS_AT).apply()
             _uiState.update {
                 it.copy(
                     isTimerRunning = false,
                     timerEndsAtMillis = 0L,
-                    statusMessage = "Triggering incoming call now."
+                    statusMessage = if (triggered) {
+                        "Triggering incoming call now."
+                    } else {
+                        "Could not trigger call. Enable provider in Calling Accounts."
+                    }
                 )
             }
+            return
+        }
+
+        FakeCallAlarmScheduler.cancel(getApplication())
+        val scheduled = FakeCallAlarmScheduler.scheduleExact(
+            context = getApplication(),
+            triggerAtMillis = triggerAtMillis,
+            callerName = state.callerName,
+            callerNumber = number,
+            providerName = state.providerName
+        )
+
+        if (!scheduled) {
+            _uiState.update {
+                it.copy(statusMessage = "Enable exact alarms to schedule precise calls.")
+            }
+            return
+        }
+
+        prefs.edit().putLong(KEY_TIMER_ENDS_AT, triggerAtMillis).apply()
+        _uiState.update {
+            it.copy(
+                isTimerRunning = true,
+                timerEndsAtMillis = triggerAtMillis,
+                statusMessage = buildScheduleStatus(state.scheduleKind, selectedDelaySeconds, triggerAtMillis)
+            )
         }
     }
 
     private fun cancelTimer() {
-        FakeCallSchedulerService.cancel(getApplication())
+        FakeCallAlarmScheduler.cancel(getApplication())
         prefs.edit().remove(KEY_TIMER_ENDS_AT).apply()
         _uiState.update {
             it.copy(
@@ -314,6 +505,7 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
 
         val now = System.currentTimeMillis()
         if (now >= endsAt) {
+            FakeCallAlarmScheduler.cancel(getApplication())
             prefs.edit().remove(KEY_TIMER_ENDS_AT).apply()
             _uiState.update {
                 it.copy(isTimerRunning = false, timerEndsAtMillis = 0L)
@@ -338,6 +530,79 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
         }
         val enabled = telecomHelper.isAccountEnabled()
         _uiState.update { it.copy(isProviderEnabled = enabled) }
+    }
+
+    private fun customCountdownSeconds(state: FakeCallUiState): Int {
+        val minutes = state.customCountdownMinutes.coerceAtLeast(0)
+        val seconds = state.customCountdownSeconds.coerceAtLeast(0)
+        return minutes * 60 + seconds
+    }
+
+    private fun computeNextExactTriggerMillis(hour: Int, minute: Int): Long {
+        val now = ZonedDateTime.now()
+        var target = now.withHour(hour).withMinute(minute).withSecond(0).withNano(0)
+        if (!target.isAfter(now)) {
+            target = target.plusDays(1)
+        }
+        return target.toInstant().toEpochMilli()
+    }
+
+    private fun buildScheduleStatus(
+        kind: ScheduleKind,
+        delaySeconds: Int,
+        triggerAtMillis: Long
+    ): String {
+        return when (kind) {
+            ScheduleKind.CUSTOM_EXACT -> {
+                val time = Instant.ofEpochMilli(triggerAtMillis)
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalTime()
+                val formatter = DateTimeFormatter.ofPattern("HH:mm")
+                "Call scheduled for ${time.format(formatter)}."
+            }
+            else -> "Timer started for ${formatDelay(delaySeconds)}."
+        }
+    }
+
+    private fun parseCustomPresets(raw: String): List<CustomPreset> {
+        if (raw.isBlank()) return emptyList()
+        return raw.split("|").mapNotNull { token ->
+            val parts = token.split(",")
+            if (parts.isEmpty()) return@mapNotNull null
+            return@mapNotNull when (parts[0]) {
+                "C" -> {
+                    if (parts.size < 3) return@mapNotNull null
+                    val minutes = parts[1].toIntOrNull() ?: return@mapNotNull null
+                    val seconds = parts[2].toIntOrNull() ?: return@mapNotNull null
+                    CustomPreset(
+                        kind = ScheduleKind.CUSTOM_COUNTDOWN,
+                        minutes = minutes.coerceIn(0, 59),
+                        seconds = seconds.coerceIn(0, 59)
+                    )
+                }
+                "E" -> {
+                    if (parts.size < 3) return@mapNotNull null
+                    val hour = parts[1].toIntOrNull() ?: return@mapNotNull null
+                    val minute = parts[2].toIntOrNull() ?: return@mapNotNull null
+                    CustomPreset(
+                        kind = ScheduleKind.CUSTOM_EXACT,
+                        hour = hour.coerceIn(0, 23),
+                        minute = minute.coerceIn(0, 59)
+                    )
+                }
+                else -> null
+            }
+        }
+    }
+
+    private fun serializeCustomPresets(presets: List<CustomPreset>): String {
+        return presets.joinToString("|") { preset ->
+            when (preset.kind) {
+                ScheduleKind.CUSTOM_COUNTDOWN -> "C,${preset.minutes},${preset.seconds}"
+                ScheduleKind.CUSTOM_EXACT -> "E,${preset.hour},${preset.minute}"
+                else -> ""
+            }
+        }.trim('|')
     }
 
     private fun fallbackNameFromUri(uri: Uri): String {
@@ -369,6 +634,12 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
         private const val KEY_CALLER_NAME = "caller_name"
         private const val KEY_CALLER_NUMBER = "caller_number"
         private const val KEY_DELAY_SECONDS = "delay_seconds"
+        private const val KEY_SCHEDULE_KIND = "schedule_kind"
+        private const val KEY_CUSTOM_COUNTDOWN_MINUTES = "custom_countdown_minutes"
+        private const val KEY_CUSTOM_COUNTDOWN_SECONDS = "custom_countdown_seconds"
+        private const val KEY_CUSTOM_EXACT_HOUR = "custom_exact_hour"
+        private const val KEY_CUSTOM_EXACT_MINUTE = "custom_exact_minute"
+        private const val KEY_CUSTOM_PRESETS = "custom_presets"
         private const val KEY_TIMER_ENDS_AT = "timer_ends_at"
         private const val KEY_AUDIO_URI = "audio_uri"
         private const val KEY_AUDIO_NAME = "audio_name"
