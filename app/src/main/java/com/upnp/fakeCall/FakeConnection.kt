@@ -56,14 +56,13 @@ class FakeConnection(
 
     override fun onAnswer() {
         setActive()
-        try {
-            setAudioRoute(CallAudioState.ROUTE_SPEAKER)
-        } catch (_: Throwable) {
-            // Device or OEM may reject forced route changes.
-        }
         runCatching {
             audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
-            audioManager.isSpeakerphoneOn = true
+        }
+        runCatching {
+            // Start on earpiece, but allow system UI to switch routes afterward.
+            setAudioRoute(CallAudioState.ROUTE_EARPIECE)
+            audioManager.isSpeakerphoneOn = false
         }
         startVoicePlayback()
         maybeStartMicRecording()
@@ -87,6 +86,11 @@ class FakeConnection(
             // Keep the mic live while we are actively recording to avoid unexpected dropouts.
             audioManager.isMicrophoneMute = if (mediaRecorder != null) false else state.isMuted
         }
+        runCatching {
+            // Respect the system route (earpiece vs. speaker) so the phone app toggle works.
+            audioManager.isSpeakerphoneOn = state.route == CallAudioState.ROUTE_SPEAKER
+            audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+        }
     }
 
     override fun onPlayDtmfTone(c: Char) {
@@ -107,7 +111,6 @@ class FakeConnection(
         stopAndReleasePlayer()
         stopAndReleaseRecording()
         runCatching {
-            audioManager.isSpeakerphoneOn = false
             audioManager.mode = AudioManager.MODE_NORMAL
         }
         setDisconnected(DisconnectCause(code))

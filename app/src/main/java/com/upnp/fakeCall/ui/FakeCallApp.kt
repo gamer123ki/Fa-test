@@ -15,17 +15,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntOffset
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.upnp.fakeCall.FakeCallViewModel
 import com.upnp.fakeCall.ui.screens.DashboardScreen
+import com.upnp.fakeCall.ui.screens.OnboardingScreen
 import com.upnp.fakeCall.ui.screens.SettingsScreen
 
+private const val ROUTE_ONBOARDING = "onboarding"
 private const val ROUTE_DASHBOARD = "dashboard"
 private const val ROUTE_SETTINGS = "settings"
 
@@ -38,6 +42,7 @@ private val RequiredPermissions = arrayOf(
 @Composable
 fun FakeCallApp(viewModel: FakeCallViewModel = viewModel()) {
     val navController = rememberNavController()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val slideSpec = tween<IntOffset>(
         durationMillis = 380,
         easing = FastOutSlowInEasing
@@ -67,7 +72,7 @@ fun FakeCallApp(viewModel: FakeCallViewModel = viewModel()) {
     ) {
         NavHost(
             navController = navController,
-            startDestination = ROUTE_DASHBOARD,
+            startDestination = if (state.isOnboardingComplete) ROUTE_DASHBOARD else ROUTE_ONBOARDING,
             modifier = Modifier.fillMaxSize(),
             enterTransition = {
                 slideIntoContainer(
@@ -94,6 +99,18 @@ fun FakeCallApp(viewModel: FakeCallViewModel = viewModel()) {
                 ) + fadeOut(animationSpec = fadeSpec)
             }
         ) {
+            composable(route = ROUTE_ONBOARDING) {
+                OnboardingScreen(
+                    viewModel = viewModel,
+                    onRequestPermissions = { permissionLauncher.launch(RequiredPermissions) },
+                    onFinish = {
+                        navController.navigate(ROUTE_DASHBOARD) {
+                            popUpTo(ROUTE_ONBOARDING) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
             composable(route = ROUTE_DASHBOARD) {
                 DashboardScreen(
                     viewModel = viewModel,

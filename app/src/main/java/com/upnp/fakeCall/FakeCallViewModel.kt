@@ -41,6 +41,7 @@ data class CustomPreset(
 )
 
 data class FakeCallUiState(
+    val isOnboardingComplete: Boolean = false,
     val providerName: String = "Fake Call Provider",
     val callerName: String = "",
     val callerNumber: String = "",
@@ -71,6 +72,7 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
 
     private val _uiState = MutableStateFlow(
         FakeCallUiState(
+            isOnboardingComplete = prefs.getBoolean(KEY_ONBOARDING_COMPLETE, false),
             providerName = prefs.getString(KEY_PROVIDER_NAME, "Fake Call Provider").orEmpty(),
             callerName = prefs.getString(KEY_CALLER_NAME, "").orEmpty(),
             callerNumber = prefs.getString(KEY_CALLER_NUMBER, "").orEmpty(),
@@ -491,6 +493,11 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
         return Intent(TelecomManager.ACTION_CHANGE_PHONE_ACCOUNTS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 
+    fun completeOnboarding() {
+        prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETE, true).apply()
+        _uiState.update { it.copy(isOnboardingComplete = true) }
+    }
+
     fun canScheduleExactAlarms(): Boolean {
         return FakeCallAlarmScheduler.canScheduleExact(getApplication())
     }
@@ -785,6 +792,7 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
         private const val KEY_RECORDING_ENABLED = "recording_enabled"
         private const val KEY_RECORDINGS_TREE_URI = "recordings_tree_uri"
         private const val KEY_RECORDINGS_FOLDER_NAME = "recordings_folder_name"
+        private const val KEY_ONBOARDING_COMPLETE = "onboarding_complete"
 
         fun formatDelay(seconds: Int): String {
             return when {
