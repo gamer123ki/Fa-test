@@ -83,51 +83,6 @@ FakeCall/
 └── README.md         # This README file
 ```
 
-##  Development
-
-### Available Gradle Tasks
-
-You can run various Gradle tasks directly from Android Studio (via the Gradle tool window) or from your terminal using `./gradlew` (or `gradlew.bat` on Windows).
-
-| Command                  | Description                                            |
-
-| :----------------------- | :----------------------------------------------------- |
-
-| `./gradlew build`        | Assembles and checks all project components.           |
-
-| `./gradlew clean`        | Deletes the build directory.                           |
-
-| `./gradlew installDebug` | Installs the debug APK on a connected device/emulator. |
-
-| `./gradlew lint`         | Runs Android Lint checks.                              |
-
-| `./gradlew test`         | Runs unit tests.                                       |
-
-| `./gradlew assembleRelease` | Assembles the release APK.                            |
-
-### Development Workflow
-
-1.  Open the project in Android Studio.
-2.  Make changes to the Kotlin source code, XML resources, or Compose UI files within the `app/src/main` directory.
-3.  Use the `Run` button in Android Studio to quickly deploy and test changes on a connected device or emulator.
-4.  Utilize the Gradle tool window for specific build tasks, dependency management, and running tests.
-
-##  Testing
-
-The project is expected to follow standard Android testing practices.
-
-### Unit Tests
-Unit tests are typically written in Kotlin and located under `app/src/test`. They can be run quickly without an emulator.
-```bash
-./gradlew testDebugUnitTest
-```
-
-### UI Tests (Instrumentation Tests)
-UI tests for Android (instrumentation tests) are typically written in Kotlin and located under `app/src/androidTest`. These tests require a device or emulator to run.
-```bash
-./gradlew connectedCheck
-```
-
 ## Contributing
 
 We welcome contributions to FakeCall!
