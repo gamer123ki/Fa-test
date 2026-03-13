@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img src="https://github.com/DDOneApps/FakeCall/blob/main/1831922.svg" width=20% title="logo" />
+<img src="https://github.com/DDOneApps/FakeCall/app/src/main/res/drawable/ic_launcher_foreground.xml" width=20% title="logo" />
 
 <p>
 
@@ -90,7 +90,8 @@ We welcome contributions to FakeCall!
 
 ## License
 
-<!-- TODO: Add a LICENSE file (e.g., MIT, Apache 2.0) for proper open-source distribution. -->
+This Project is licenced under GNU General Public License.
+Read it [Here](https://raw.githubusercontent.com/DDOneApps/FakeCall/refs/heads/main/LICENSE)
 
 ## Acknowledgments
 
