@@ -54,16 +54,27 @@ FakeCall exposes a broadcast receiver for automation apps.
 
 If one or more extras are omitted, FakeCall falls back to the saved **Automation & Quick Trigger Defaults** from Settings.
 
-**ADB example**
+**ADB example (recommended, package-targeted, no `-n` needed)**
 
 ```bash
-adb shell am broadcast -a com.upnp.fakeCall.TRIGGER \
-  --es caller_name "Boss" \
-  --es caller_number "+49123456789" \
-  --ei delay 30
+adb shell am broadcast -a com.upnp.fakeCall.TRIGGER -p com.upnp.fakeCall --es caller_name "Boss" --es caller_number "+49123456789" --ei delay 30
 ```
 
-This API works well with Tasker, MacroDroid, and similar automation apps that can send custom broadcasts.
+**Windows `cmd.exe` (single line)**
+
+```cmd
+adb shell am broadcast -a com.upnp.fakeCall.TRIGGER -p com.upnp.fakeCall --es caller_name "Boss" --es caller_number "+49123456789" --ei delay 30
+```
+
+**Explicit component fallback**
+
+```bash
+adb shell am broadcast -n com.upnp.fakeCall/.ExternalTriggerReceiver -a com.upnp.fakeCall.TRIGGER --es caller_name "Boss" --es caller_number "+49123456789" --ei delay 30
+```
+
+For Tasker, MacroDroid, etc. set:
+- Action: `com.upnp.fakeCall.TRIGGER`
+- Package: `com.upnp.fakeCall`
 
 ## Accessibility Quick Trigger
 

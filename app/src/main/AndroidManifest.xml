@@ -130,6 +130,8 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="com.upnp.fakeCall.TRIGGER" />
+                <action android:name="com.ddone.fakecall.TRIGGER" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
 

@@ -7,7 +7,8 @@ import android.widget.Toast
 
 class ExternalTriggerReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
-        if (intent?.action != ACTION_TRIGGER) return
+        val action = intent?.action
+        if (action != ACTION_TRIGGER && action != ACTION_TRIGGER_LEGACY) return
 
         val callerName = intent?.getStringExtra(EXTRA_CALLER_NAME)
         val callerNumber = intent?.getStringExtra(EXTRA_CALLER_NUMBER)
@@ -29,6 +30,7 @@ class ExternalTriggerReceiver : BroadcastReceiver() {
 
     companion object {
         const val ACTION_TRIGGER = "com.upnp.fakeCall.TRIGGER"
+        const val ACTION_TRIGGER_LEGACY = "com.ddone.fakecall.TRIGGER"
         const val EXTRA_CALLER_NAME = "caller_name"
         const val EXTRA_CALLER_NUMBER = "caller_number"
         const val EXTRA_DELAY_SECONDS = "delay"
