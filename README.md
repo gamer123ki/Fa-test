@@ -36,6 +36,7 @@ Introducing FakeCall. Unlike other apps that merely mock a UI, this app integrat
 -  **Recording:** record microphone audio of a Fake call
 -  **Automation API:** trigger calls from Tasker, MacroDroid, or ADB via a broadcast intent
 -  **Accessibility Shortcut:** schedule a fake call from the system accessibility button using saved defaults
+-  **Quick Trigger Presets:** save up to 5 presets and expose them as launcher app actions + Quick Settings tiles
 
 ## Automation API
 
@@ -71,6 +72,11 @@ Enable the `FakeCall` accessibility service and assign it to the system accessib
 You can configure these defaults inside:
 
 `Settings -> Automation & Quick Trigger Defaults`
+
+You can also save up to five quick trigger presets from the same section:
+
+- presets appear as launcher app actions (long-press the app icon)
+- presets are available as Quick Settings tiles (`FakeCall Preset 1` ... `FakeCall Preset 5`)
 
 ## Screenshots
 

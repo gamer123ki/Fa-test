@@ -65,6 +65,8 @@ data class FakeCallUiState(
     val quickTriggerCallerName: String = "",
     val quickTriggerCallerNumber: String = "",
     val quickTriggerDelaySeconds: Int = QuickTriggerManager.DEFAULT_DELAY_SECONDS,
+    val quickTriggerPresetName: String = "",
+    val quickTriggerPresets: List<QuickTriggerPreset> = emptyList(),
     val startupUpdate: ReleaseInfo? = null
 )
 
@@ -75,6 +77,7 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
     private val ivrStore = IvrConfigStore()
     private val updateChecker = UpdateChecker()
     private val quickTriggerDefaults = QuickTriggerManager.loadDefaults(application)
+    private val quickTriggerPresets = QuickTriggerManager.loadPresets(application)
 
     private val _uiState = MutableStateFlow(
         FakeCallUiState(
@@ -101,7 +104,9 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
             recordingsFolderName = prefs.getString(KEY_RECORDINGS_FOLDER_NAME, "Downloads/FakeCall").orEmpty(),
             quickTriggerCallerName = quickTriggerDefaults.callerName,
             quickTriggerCallerNumber = quickTriggerDefaults.callerNumber,
-            quickTriggerDelaySeconds = quickTriggerDefaults.delaySeconds
+            quickTriggerDelaySeconds = quickTriggerDefaults.delaySeconds,
+            quickTriggerPresetName = prefs.getString(KEY_QUICK_TRIGGER_PRESET_NAME, "").orEmpty(),
+            quickTriggerPresets = quickTriggerPresets
         )
     )
     val uiState: StateFlow<FakeCallUiState> = _uiState.asStateFlow()
@@ -122,6 +127,8 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             checkForUpdatesOnStartup()
         }
+
+        QuickTriggerManager.updateLauncherShortcuts(application)
     }
 
     suspend fun checkForUpdatesManual(): UpdateCheckResult {
@@ -161,6 +168,56 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
 
     fun onQuickTriggerDelayChange(delaySeconds: Int) {
         saveQuickTriggerDefaults(uiState.value.copy(quickTriggerDelaySeconds = delaySeconds))
+    }
+
+    fun onQuickTriggerPresetNameChange(value: String) {
+        prefs.edit().putString(KEY_QUICK_TRIGGER_PRESET_NAME, value).apply()
+        _uiState.update { it.copy(quickTriggerPresetName = value) }
+    }
+
+    fun saveQuickTriggerPreset() {
+        val customName = uiState.value.quickTriggerPresetName.trim()
+        val result = QuickTriggerManager.saveCurrentDefaultsAsPreset(
+            context = getApplication(),
+            customTitle = customName
+        )
+        val status = when (result) {
+            QuickTriggerPresetSaveResult.SAVED -> "Quick trigger preset saved."
+            QuickTriggerPresetSaveResult.LIMIT_REACHED -> "You can only save up to 5 quick trigger presets."
+            QuickTriggerPresetSaveResult.INVALID_DATA -> "Enter a caller number before saving a preset."
+        }
+        refreshQuickTriggerPresets(status)
+        if (result == QuickTriggerPresetSaveResult.SAVED) {
+            prefs.edit().putString(KEY_QUICK_TRIGGER_PRESET_NAME, "").apply()
+            _uiState.update { it.copy(quickTriggerPresetName = "") }
+        }
+    }
+
+    fun applyQuickTriggerPreset(slot: Int) {
+        val applied = QuickTriggerManager.applyPresetToDefaults(getApplication(), slot)
+        if (!applied) {
+            _uiState.update { it.copy(statusMessage = "Preset not found.") }
+            return
+        }
+        val defaults = QuickTriggerManager.loadDefaults(getApplication())
+        _uiState.update {
+            it.copy(
+                quickTriggerCallerName = defaults.callerName,
+                quickTriggerCallerNumber = defaults.callerNumber,
+                quickTriggerDelaySeconds = defaults.delaySeconds,
+                statusMessage = "Preset applied to quick trigger defaults."
+            )
+        }
+    }
+
+    fun removeQuickTriggerPreset(slot: Int) {
+        val removed = QuickTriggerManager.removePreset(getApplication(), slot)
+        val status = if (removed) {
+            "Quick trigger preset removed."
+        } else {
+            "Preset not found."
+        }
+        refreshQuickTriggerPresets(status)
     }
 
     fun onCallerNameChange(value: String) {
@@ -603,6 +660,7 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
             }
 
             prefs.edit().remove(KEY_TIMER_ENDS_AT).apply()
+            prefs.edit().putInt(KEY_ACTIVE_PRESET_SLOT, -1).apply()
             _uiState.update {
                 it.copy(
                     isTimerRunning = false,
@@ -614,6 +672,7 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
                     }
                 )
             }
+            QuickTriggerManager.refreshQuickSettingsTiles(getApplication())
             return
         }
 
@@ -633,7 +692,10 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
             return
         }
 
-        prefs.edit().putLong(KEY_TIMER_ENDS_AT, triggerAtMillis).apply()
+        prefs.edit()
+            .putLong(KEY_TIMER_ENDS_AT, triggerAtMillis)
+            .putInt(KEY_ACTIVE_PRESET_SLOT, -1)
+            .apply()
         _uiState.update {
             it.copy(
                 isTimerRunning = true,
@@ -641,11 +703,15 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
                 statusMessage = buildScheduleStatus(state.scheduleKind, selectedDelaySeconds, triggerAtMillis)
             )
         }
+        QuickTriggerManager.refreshQuickSettingsTiles(getApplication())
     }
 
     private fun cancelTimer() {
         FakeCallAlarmScheduler.cancel(getApplication())
-        prefs.edit().remove(KEY_TIMER_ENDS_AT).apply()
+        prefs.edit()
+            .remove(KEY_TIMER_ENDS_AT)
+            .putInt(KEY_ACTIVE_PRESET_SLOT, -1)
+            .apply()
         _uiState.update {
             it.copy(
                 isTimerRunning = false,
@@ -653,6 +719,7 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
                 statusMessage = "Timer cancelled."
             )
         }
+        QuickTriggerManager.refreshQuickSettingsTiles(getApplication())
     }
 
     private fun syncRunningTimerState() {
@@ -722,6 +789,15 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
                 quickTriggerCallerName = state.quickTriggerCallerName,
                 quickTriggerCallerNumber = state.quickTriggerCallerNumber,
                 quickTriggerDelaySeconds = state.quickTriggerDelaySeconds
+            )
+        }
+    }
+
+    private fun refreshQuickTriggerPresets(statusMessage: String) {
+        _uiState.update {
+            it.copy(
+                quickTriggerPresets = QuickTriggerManager.loadPresets(getApplication()),
+                statusMessage = statusMessage
             )
         }
     }
@@ -847,12 +923,14 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
         private const val KEY_CUSTOM_EXACT_MINUTE = "custom_exact_minute"
         private const val KEY_CUSTOM_PRESETS = "custom_presets"
         private const val KEY_TIMER_ENDS_AT = "timer_ends_at"
+        private const val KEY_ACTIVE_PRESET_SLOT = "quick_trigger_active_preset_slot"
         private const val KEY_AUDIO_URI = "audio_uri"
         private const val KEY_AUDIO_NAME = "audio_name"
         private const val KEY_RECORDING_ENABLED = "recording_enabled"
         private const val KEY_RECORDINGS_TREE_URI = "recordings_tree_uri"
         private const val KEY_RECORDINGS_FOLDER_NAME = "recordings_folder_name"
         private const val KEY_ONBOARDING_COMPLETE = "onboarding_complete"
+        private const val KEY_QUICK_TRIGGER_PRESET_NAME = "quick_trigger_preset_name"
 
         fun formatDelay(seconds: Int): String {
             return when {

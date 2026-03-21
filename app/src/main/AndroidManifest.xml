@@ -61,6 +61,66 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
+        <service
+            android:name=".QuickTriggerTile1Service"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@drawable/ic_quick_trigger_phone"
+            android:label="FakeCall Preset 1"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".QuickTriggerTile2Service"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@drawable/ic_quick_trigger_phone"
+            android:label="FakeCall Preset 2"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".QuickTriggerTile3Service"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@drawable/ic_quick_trigger_phone"
+            android:label="FakeCall Preset 3"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".QuickTriggerTile4Service"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@drawable/ic_quick_trigger_phone"
+            android:label="FakeCall Preset 4"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".QuickTriggerTile5Service"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@drawable/ic_quick_trigger_phone"
+            android:label="FakeCall Preset 5"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
         <receiver
             android:name=".FakeCallAlarmReceiver"
             android:exported="false" />
@@ -72,6 +132,15 @@
                 <action android:name="com.upnp.fakeCall.TRIGGER" />
             </intent-filter>
         </receiver>
+
+        <activity
+            android:name=".ShortcutTriggerActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Fakecall.ShortcutTrigger" />
 
         <activity
             android:name=".MainActivity"

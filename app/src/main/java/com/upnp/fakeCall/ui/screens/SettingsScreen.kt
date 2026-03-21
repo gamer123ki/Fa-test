@@ -84,6 +84,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.upnp.fakeCall.BuildConfig
 import com.upnp.fakeCall.FakeCallViewModel
+import com.upnp.fakeCall.QuickTriggerManager
 import com.upnp.fakeCall.ReleaseInfo
 import com.upnp.fakeCall.UpdateCheckResult
 import com.upnp.fakeCall.ivr.IvrNode
@@ -394,6 +395,77 @@ fun SettingsScreen(
                             }
                             Text(
                                 text = "Enable the FakeCall accessibility service there to use the system accessibility button or shortcut for instant scheduling.",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            ExpressiveTextField(
+                                value = state.quickTriggerPresetName,
+                                onValueChange = viewModel::onQuickTriggerPresetNameChange,
+                                label = "Preset name (optional)",
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            FilledTonalButton(
+                                onClick = viewModel::saveQuickTriggerPreset,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .bounceClick(enabled = state.quickTriggerPresets.size < QuickTriggerManager.MAX_PRESETS),
+                                enabled = state.quickTriggerPresets.size < QuickTriggerManager.MAX_PRESETS
+                            ) {
+                                Text("Save Current Defaults As Preset (${state.quickTriggerPresets.size}/${QuickTriggerManager.MAX_PRESETS})")
+                            }
+                            if (state.quickTriggerPresets.isEmpty()) {
+                                Text(
+                                    text = "No quick trigger presets yet. Save one to expose it as launcher app action and Quick Settings tile.",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            } else {
+                                state.quickTriggerPresets.forEachIndexed { index, preset ->
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.surfaceContainer,
+                                        shape = RoundedCornerShape(22.dp),
+                                        tonalElevation = 1.dp
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(12.dp),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Text(
+                                                text = "Preset ${index + 1}: ${preset.title}",
+                                                style = MaterialTheme.typography.titleSmall,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Text(
+                                                text = "${preset.callerName.ifBlank { "Unknown Caller" }} • ${preset.callerNumber} • ${FakeCallViewModel.formatDelay(preset.delaySeconds)}",
+                                                style = MaterialTheme.typography.labelLarge,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                TextButton(
+                                                    onClick = { viewModel.applyQuickTriggerPreset(index + 1) },
+                                                    modifier = Modifier.bounceClick()
+                                                ) {
+                                                    Text("Apply To Defaults")
+                                                }
+                                                TextButton(
+                                                    onClick = { viewModel.removeQuickTriggerPreset(index + 1) },
+                                                    modifier = Modifier.bounceClick()
+                                                ) {
+                                                    Text("Remove")
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            Text(
+                                text = "Presets appear as app actions on launcher long-press and as Quick Settings tiles (Preset 1-5).",
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
