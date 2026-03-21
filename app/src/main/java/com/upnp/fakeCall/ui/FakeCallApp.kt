@@ -68,7 +68,10 @@ private val RequiredPermissions = arrayOf(
 )
 
 @Composable
-fun FakeCallApp(viewModel: FakeCallViewModel = viewModel()) {
+fun FakeCallApp(
+    viewModel: FakeCallViewModel = viewModel(),
+    startInSettings: Boolean = false
+) {
     val navController = rememberNavController()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = navController.context
@@ -103,7 +106,11 @@ fun FakeCallApp(viewModel: FakeCallViewModel = viewModel()) {
         Box(modifier = Modifier.fillMaxSize()) {
             NavHost(
                 navController = navController,
-                startDestination = if (state.isOnboardingComplete) ROUTE_DASHBOARD else ROUTE_ONBOARDING,
+                startDestination = when {
+                    startInSettings && state.isOnboardingComplete -> ROUTE_SETTINGS
+                    state.isOnboardingComplete -> ROUTE_DASHBOARD
+                    else -> ROUTE_ONBOARDING
+                },
                 modifier = Modifier.fillMaxSize(),
                 enterTransition = {
                     slideIntoContainer(
