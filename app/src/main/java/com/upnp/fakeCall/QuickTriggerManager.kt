@@ -56,7 +56,6 @@ object QuickTriggerManager {
     private const val KEY_QUICK_TRIGGER_DELAY_SECONDS = "quick_trigger_delay_seconds"
     private const val KEY_QUICK_TRIGGER_PRESETS = "quick_trigger_presets_v1"
     private const val KEY_ACTIVE_PRESET_SLOT = "quick_trigger_active_preset_slot"
-    private const val DEFAULT_PROVIDER_NAME = "Fake Call Provider"
     private const val SHORTCUT_ID_PREFIX = "quick_trigger_preset_"
     const val DEFAULT_DELAY_SECONDS = 10
     const val MAX_PRESETS = 5
@@ -230,8 +229,9 @@ object QuickTriggerManager {
         val resolvedName = callerName?.takeIf { it.isNotBlank() } ?: defaults.callerName
         val resolvedNumber = callerNumber?.takeIf { it.isNotBlank() } ?: defaults.callerNumber
         val resolvedDelay = delaySeconds ?: defaults.delaySeconds
-        val providerName = prefs.getString(KEY_PROVIDER_NAME, DEFAULT_PROVIDER_NAME).orEmpty()
-            .ifBlank { DEFAULT_PROVIDER_NAME }
+        val defaultProviderName = context.getString(R.string.default_provider_name)
+        val providerName = prefs.getString(KEY_PROVIDER_NAME, defaultProviderName).orEmpty()
+            .ifBlank { defaultProviderName }
 
         if (resolvedNumber.isBlank()) return null
 
@@ -249,7 +249,7 @@ object QuickTriggerManager {
         val presets = loadPresets(context)
         val shortcuts = presets.mapIndexed { index, preset ->
             val slot = index + 1
-            val shortLabel = preset.title.ifBlank { "Preset $slot" }.take(10)
+            val shortLabel = preset.title.ifBlank { context.getString(R.string.tile_preset_label, slot) }.take(10)
             val longLabel = "${preset.title} • ${formatDelay(preset.delaySeconds)}"
             val intent = Intent(context, ShortcutTriggerActivity::class.java).apply {
                 action = ACTION_TRIGGER_PRESET

@@ -64,6 +64,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
@@ -122,7 +123,7 @@ fun DashboardScreen(
     )
 
     val canTrigger = state.hasRequiredPermissions && state.isProviderEnabled
-    val actionLabel = if (state.isTimerRunning) "Cancel Call" else "Schedule Call"
+    val actionLabel = if (state.isTimerRunning) stringResource(R.string.action_cancel_call) else stringResource(R.string.action_schedule_call)
     val is24Hour = DateFormat.is24HourFormat(context)
 
     val actionContainerColor by animateColorAsState(
@@ -179,20 +180,20 @@ fun DashboardScreen(
                     ) {
                         Column {
                             Text(
-                                text = "FakeCall",
+                                text = stringResource(R.string.app_title),
                                 style = MaterialTheme.typography.displayMedium,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = "Schedule your perfect escape",
+                                text = stringResource(R.string.app_subtitle),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         AnimatedIcon(
                             imageVector = Icons.Outlined.Settings,
-                            contentDescription = "Open settings",
+                            contentDescription = stringResource(R.string.cd_open_settings),
                             shape = RoundedCornerShape(16.dp),
                             backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                             tint = MaterialTheme.colorScheme.onSurface,
@@ -260,13 +261,13 @@ fun DashboardScreen(
 
                     item {
                         val manualLabel = when (state.scheduleKind) {
-                            ScheduleKind.PRESET -> "Set custom time"
+                            ScheduleKind.PRESET -> stringResource(R.string.schedule_kind_set_custom_time)
                             else -> scheduleDisplay(state, is24Hour)
                         }
                         val manualHelper = when (state.scheduleKind) {
-                            ScheduleKind.CUSTOM_EXACT -> "Exact time"
-                            ScheduleKind.CUSTOM_COUNTDOWN -> "Countdown timer"
-                            ScheduleKind.PRESET -> "Manual override"
+                            ScheduleKind.CUSTOM_EXACT -> stringResource(R.string.schedule_kind_exact_time)
+                            ScheduleKind.CUSTOM_COUNTDOWN -> stringResource(R.string.schedule_kind_countdown_timer)
+                            ScheduleKind.PRESET -> stringResource(R.string.schedule_kind_manual_override)
                         }
                         TimingSelectionCard(
                             scheduleTitle = scheduleDisplay(state, is24Hour),
@@ -319,17 +320,17 @@ fun DashboardScreen(
                                     verticalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
                                     Text(
-                                        text = "Exact alarms are off.",
+                                        text = stringResource(R.string.error_exact_alarms_off_title),
                                         style = MaterialTheme.typography.titleMedium,
                                         color = MaterialTheme.colorScheme.onErrorContainer
                                     )
                                     Text(
-                                        text = "Enable precise alarms to schedule exact-time calls.",
+                                        text = stringResource(R.string.error_exact_alarms_off_subtitle),
                                         style = MaterialTheme.typography.labelLarge,
                                         color = MaterialTheme.colorScheme.onErrorContainer
                                     )
                                     ExpressiveButton(
-                                        label = "Enable precise alarms",
+                                        label = stringResource(R.string.permission_alarms_action),
                                         onClick = {
                                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                             val intent = viewModel.openExactAlarmSettingsIntent()
@@ -345,7 +346,7 @@ fun DashboardScreen(
 
                     item {
                         AudioPreviewCard(
-                            audioLabel = state.selectedAudioName.ifBlank { "Default" },
+                            audioLabel = state.selectedAudioName.ifBlank { stringResource(R.string.default_audio_name) },
                             audioUri = state.selectedAudioUri,
                             onOpenSettings = onOpenSettings,
                             onClearAudio = viewModel::clearAudioSelection
@@ -377,7 +378,7 @@ fun DashboardScreen(
                                 color = MaterialTheme.colorScheme.errorContainer
                             ) {
                                 Text(
-                                    text = "Grant permissions and enable the provider in Settings.",
+                                    text = stringResource(R.string.error_grant_permissions),
                                     style = MaterialTheme.typography.labelLarge,
                                     color = MaterialTheme.colorScheme.onErrorContainer,
                                     modifier = Modifier.padding(16.dp)
@@ -461,7 +462,7 @@ private fun ScheduleStateCard(
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = if (running) "Call scheduled" else "Ready to schedule",
+                        text = if (running) stringResource(R.string.schedule_state_running) else stringResource(R.string.schedule_state_ready),
                         style = MaterialTheme.typography.displaySmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -506,7 +507,7 @@ private fun ScheduledBanner(runningLabel: String) {
             )
             Column {
                 Text(
-                    text = "Call scheduled",
+                    text = stringResource(R.string.schedule_state_running),
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(
@@ -671,7 +672,7 @@ private fun CustomCallSheet(
                             tint = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                         Text(
-                            text = "Custom Call",
+                            text = stringResource(R.string.custom_call_sheet_title),
                             style = MaterialTheme.typography.displaySmall,
                             fontWeight = FontWeight.Bold
                         )
@@ -686,7 +687,7 @@ private fun CustomCallSheet(
                                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 onScheduleKindChange(ScheduleKind.CUSTOM_COUNTDOWN)
                             },
-                            label = { Text("Countdown") },
+                            label = { Text(stringResource(R.string.filter_countdown)) },
                             shape = RoundedCornerShape(999.dp),
                             modifier = Modifier.bounceClick()
                         )
@@ -696,7 +697,7 @@ private fun CustomCallSheet(
                                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 onScheduleKindChange(ScheduleKind.CUSTOM_EXACT)
                             },
-                            label = { Text("Exact Time") },
+                            label = { Text(stringResource(R.string.filter_exact_time)) },
                             shape = RoundedCornerShape(999.dp),
                             modifier = Modifier.bounceClick()
                         )
@@ -726,13 +727,13 @@ private fun CustomCallSheet(
                             onClick = onSavePreset,
                             modifier = Modifier.weight(1f).bounceClick()
                         ) {
-                            Text("Save as preset")
+                            Text(stringResource(R.string.action_save_as_preset))
                         }
                         Button(
                             onClick = onDismiss,
                             modifier = Modifier.weight(1f).bounceClick()
                         ) {
-                            Text("Cancel")
+                            Text(stringResource(R.string.action_cancel))
                         }
                         Button(
                             onClick = {
@@ -741,7 +742,7 @@ private fun CustomCallSheet(
                             },
                             modifier = Modifier.weight(1f).bounceClick()
                         ) {
-                            Text("Use this time")
+                            Text(stringResource(R.string.action_use_this_time))
                         }
                     }
                 }
@@ -769,7 +770,7 @@ private fun CountdownPicker(
         verticalAlignment = Alignment.CenterVertically
     ) {
         WheelPicker(
-            label = "MIN",
+            label = stringResource(R.string.wheel_picker_minutes),
             value = minutes,
             range = 0..59,
             onValueChange = {
@@ -782,7 +783,7 @@ private fun CountdownPicker(
             fontWeight = FontWeight.Bold
         )
         WheelPicker(
-            label = "SEC",
+            label = stringResource(R.string.wheel_picker_seconds),
             value = seconds,
             range = 0..59,
             onValueChange = {
@@ -830,7 +831,7 @@ private fun ExactTimePicker(
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "Tap to edit exact time",
+                    text = stringResource(R.string.exact_time_picker_tap_hint),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -855,7 +856,7 @@ private fun ExactTimePicker(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Text(
-                        text = "Pick exact time",
+                        text = stringResource(R.string.exact_time_picker_dialog_title),
                         style = MaterialTheme.typography.displaySmall
                     )
                     TimePicker(state = timePickerState)
@@ -864,13 +865,13 @@ private fun ExactTimePicker(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Button(onClick = { showDialog = false }, modifier = Modifier.bounceClick()) {
-                            Text("Cancel")
+                            Text(stringResource(R.string.action_cancel))
                         }
                         Button(onClick = {
                             onChange(timePickerState.hour, timePickerState.minute)
                             showDialog = false
                         }, modifier = Modifier.bounceClick()) {
-                            Text("Apply")
+                            Text(stringResource(R.string.action_apply))
                         }
                     }
                 }
@@ -992,11 +993,12 @@ private fun scheduleDisplay(state: FakeCallUiState, is24Hour: Boolean): String {
     }
 }
 
+@Composable
 private fun scheduleSubtitle(state: FakeCallUiState): String {
     return when (state.scheduleKind) {
-        ScheduleKind.CUSTOM_EXACT -> "Exact time"
-        ScheduleKind.CUSTOM_COUNTDOWN -> "Countdown timer"
-        ScheduleKind.PRESET -> "Quick preset"
+        ScheduleKind.CUSTOM_EXACT -> stringResource(R.string.schedule_kind_exact_time)
+        ScheduleKind.CUSTOM_COUNTDOWN -> stringResource(R.string.schedule_kind_countdown_timer)
+        ScheduleKind.PRESET -> stringResource(R.string.schedule_kind_quick_preset)
     }
 }
 

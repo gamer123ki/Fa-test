@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.res.stringResource
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Icon
@@ -52,6 +53,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.upnp.fakeCall.FakeCallViewModel
+import com.upnp.fakeCall.R
 import com.upnp.fakeCall.ReleaseInfo
 import com.upnp.fakeCall.ui.screens.DashboardScreen
 import com.upnp.fakeCall.ui.screens.OnboardingScreen
@@ -223,18 +225,18 @@ private fun UpdateBanner(
                 }
             }
             Text(
-                text = "Update ${release.tagName} available!",
+                text = stringResource(R.string.update_available_banner, release.tagName),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onTertiaryContainer,
                 modifier = Modifier.weight(1f)
             )
             TextButton(onClick = onDownload) {
-                Text("Download")
+                Text(stringResource(R.string.action_download))
             }
             IconButton(onClick = onDismiss) {
                 Icon(
                     imageVector = Icons.Outlined.Close,
-                    contentDescription = "Dismiss update notice",
+                    contentDescription = stringResource(R.string.cd_dismiss_update),
                     tint = MaterialTheme.colorScheme.onTertiaryContainer
                 )
             }

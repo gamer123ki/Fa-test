@@ -52,6 +52,7 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -281,26 +282,26 @@ fun CallerInputCard(
     modifier: Modifier = Modifier
 ) {
     SectionCard(
-        title = "Caller Details",
+        title = stringResource(R.string.caller_details_title),
         modifier = modifier,
         shape = ExpressiveAsymmetricShape
     ) {
         ExpressiveTextField(
             value = callerName,
             onValueChange = onCallerNameChange,
-            label = "Caller name",
+            label = stringResource(R.string.label_caller_name),
             modifier = Modifier.fillMaxWidth(),
             imeAction = ImeAction.Next
         )
         ExpressiveTextField(
             value = callerNumber,
             onValueChange = onCallerNumberChange,
-            label = "Caller number",
+            label = stringResource(R.string.label_caller_number),
             modifier = Modifier.fillMaxWidth(),
             imeAction = ImeAction.Done
         )
         Text(
-            text = "Shown on the incoming call screen.",
+            text = stringResource(R.string.hint_shown_on_incoming_call),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -325,7 +326,7 @@ fun TimingSelectionCard(
     modifier: Modifier = Modifier
 ) {
     SectionCard(
-        title = "Timing",
+        title = stringResource(R.string.timing_title),
         modifier = modifier
     ) {
         Text(
@@ -402,7 +403,7 @@ fun TimingSelectionCard(
 
         if (customPresets.isNotEmpty()) {
             Text(
-                text = "Saved presets",
+                text = stringResource(R.string.label_saved_presets),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -427,7 +428,7 @@ fun TimingSelectionCard(
                             Text(formatPreset(preset), style = MaterialTheme.typography.labelLarge)
                             AnimatedIcon(
                                 imageVector = Icons.Outlined.Close,
-                                contentDescription = "Remove preset",
+                                contentDescription = stringResource(R.string.cd_remove_preset),
                                 size = 28.dp,
                                 shape = CircleShape,
                                 backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -470,7 +471,7 @@ fun AudioPreviewCard(
     }
 
     SectionCard(
-        title = "Audio Preview",
+        title = stringResource(R.string.audio_preview_title),
         modifier = modifier
     ) {
         Row(
@@ -491,7 +492,7 @@ fun AudioPreviewCard(
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(
-                    text = "Tap to change or disable audio.",
+                    text = stringResource(R.string.audio_preview_hint),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -503,7 +504,7 @@ fun AudioPreviewCard(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             ExpressiveButton(
-                label = if (isPlaying) "Stop" else "Play",
+                label = if (isPlaying) stringResource(R.string.action_stop) else stringResource(R.string.action_play),
                 onClick = {
                     if (audioUri.isBlank()) return@ExpressiveButton
                     if (isPlaying) {
@@ -531,14 +532,14 @@ fun AudioPreviewCard(
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer
             )
             ExpressiveButton(
-                label = "Open settings",
+                label = stringResource(R.string.action_open_settings),
                 onClick = onOpenSettings,
                 modifier = Modifier.weight(1f),
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer
             )
             ExpressiveButton(
-                label = "Clear audio",
+                label = stringResource(R.string.action_clear_audio),
                 onClick = {
                     stopPlayback()
                     onClearAudio()

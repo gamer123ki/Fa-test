@@ -26,15 +26,15 @@ class ShortcutTriggerActivity : Activity() {
 
         when (QuickTriggerManager.executePreset(this, slot)) {
             QuickTriggerExecution.IMMEDIATE -> {
-                Toast.makeText(this, "Triggering Fake Call now...", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.toast_triggering_now), Toast.LENGTH_SHORT).show()
             }
             QuickTriggerExecution.SCHEDULED -> {
                 val preset = QuickTriggerManager.getPresetBySlot(this, slot)
                 val delay = preset?.delaySeconds ?: 0
-                Toast.makeText(this, "Fake Call scheduled in $delay seconds", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.toast_scheduled_in, delay), Toast.LENGTH_SHORT).show()
             }
             QuickTriggerExecution.FAILED -> {
-                Toast.makeText(this, "Could not run preset $slot", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.toast_preset_run_failed, slot), Toast.LENGTH_SHORT).show()
             }
         }
     }

@@ -43,9 +43,9 @@ class QuickTriggerAccessibilityService : AccessibilityService() {
             delaySeconds = defaults.delaySeconds
         )
         val message = when (result) {
-            QuickTriggerExecution.IMMEDIATE -> "Triggering Fake Call now..."
-            QuickTriggerExecution.SCHEDULED -> "Fake Call scheduled in ${defaults.delaySeconds} seconds"
-            QuickTriggerExecution.FAILED -> "Fake Call couldn't be scheduled"
+            QuickTriggerExecution.IMMEDIATE -> getString(R.string.toast_triggering_now)
+            QuickTriggerExecution.SCHEDULED -> getString(R.string.toast_scheduled_in, defaults.delaySeconds)
+            QuickTriggerExecution.FAILED -> getString(R.string.toast_call_scheduling_failed)
         }
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }

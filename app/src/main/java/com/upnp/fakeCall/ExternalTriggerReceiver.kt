@@ -24,7 +24,7 @@ class ExternalTriggerReceiver : BroadcastReceiver() {
         )
 
         if (result == QuickTriggerExecution.FAILED) {
-            Toast.makeText(context, "Fake Call couldn't be scheduled", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.toast_call_scheduling_failed), Toast.LENGTH_SHORT).show()
         }
     }
 

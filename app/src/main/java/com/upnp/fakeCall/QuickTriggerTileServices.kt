@@ -26,15 +26,15 @@ abstract class BaseQuickTriggerTileService : TileService() {
     private fun executePreset() {
         when (QuickTriggerManager.executePreset(this, presetSlot)) {
             QuickTriggerExecution.IMMEDIATE -> {
-                Toast.makeText(this, "Triggering Fake Call now...", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.toast_triggering_now), Toast.LENGTH_SHORT).show()
             }
             QuickTriggerExecution.SCHEDULED -> {
                 val preset = QuickTriggerManager.getPresetBySlot(this, presetSlot)
                 val delay = preset?.delaySeconds ?: 0
-                Toast.makeText(this, "Fake Call scheduled in $delay seconds", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.toast_scheduled_in, delay), Toast.LENGTH_SHORT).show()
             }
             QuickTriggerExecution.FAILED -> {
-                Toast.makeText(this, "Preset $presetSlot is not configured", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.toast_preset_not_configured, presetSlot), Toast.LENGTH_SHORT).show()
             }
         }
         refreshTile()
@@ -46,9 +46,9 @@ abstract class BaseQuickTriggerTileService : TileService() {
         tile.icon = Icon.createWithResource(this, R.drawable.ic_quick_trigger_phone)
         if (preset == null) {
             tile.state = Tile.STATE_UNAVAILABLE
-            tile.label = "Preset $presetSlot"
+            tile.label = getString(R.string.tile_preset_label, presetSlot)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                tile.subtitle = "Not configured"
+                tile.subtitle = getString(R.string.tile_not_configured)
             }
         } else {
             val activeSlot = QuickTriggerManager.loadActivePresetSlot(this)
@@ -57,7 +57,7 @@ abstract class BaseQuickTriggerTileService : TileService() {
             } else {
                 Tile.STATE_INACTIVE
             }
-            tile.label = "Preset $presetSlot"
+            tile.label = getString(R.string.tile_preset_label, presetSlot)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 tile.subtitle = preset.title
             }

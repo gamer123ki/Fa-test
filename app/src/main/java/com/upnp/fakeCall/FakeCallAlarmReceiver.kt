@@ -19,7 +19,7 @@ class FakeCallAlarmReceiver : BroadcastReceiver() {
         if (callerNumber.isBlank()) return
 
         val telecomHelper = TelecomHelper(context)
-        telecomHelper.registerOrUpdatePhoneAccount(providerName.ifBlank { DEFAULT_PROVIDER_NAME })
+        telecomHelper.registerOrUpdatePhoneAccount(providerName.ifBlank { context.getString(R.string.default_provider_name) })
         if (telecomHelper.isAccountEnabled()) {
             telecomHelper.triggerIncomingCall(callerName, callerNumber)
         }
@@ -32,7 +32,5 @@ class FakeCallAlarmReceiver : BroadcastReceiver() {
         const val EXTRA_CALLER_NAME = "extra_caller_name"
         const val EXTRA_CALLER_NUMBER = "extra_caller_number"
         const val EXTRA_PROVIDER_NAME = "extra_provider_name"
-
-        private const val DEFAULT_PROVIDER_NAME = "Fake Call Provider"
     }
 }

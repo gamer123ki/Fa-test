@@ -79,6 +79,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -168,14 +169,14 @@ fun SettingsScreen(
                 ) {
                     AnimatedIcon(
                         imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                        contentDescription = "Back",
+                        contentDescription = stringResource(R.string.cd_back),
                         shape = CircleShape,
                         backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                         tint = MaterialTheme.colorScheme.onSurface,
                         onClick = onBack
                     )
                     Text(
-                        text = "Settings",
+                        text = stringResource(R.string.settings_title),
                         style = MaterialTheme.typography.displayMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -196,15 +197,15 @@ fun SettingsScreen(
                 )
             ) {
                 item {
-                    PreferenceCategoryHeader("Provider")
+                    PreferenceCategoryHeader(stringResource(R.string.settings_category_provider))
                 }
 
                 if (!state.hasRequiredPermissions) {
                     item {
                         PreferenceCard(
                             icon = Icons.Outlined.Phone,
-                            title = "Phone permissions required",
-                            subtitle = "Grant access to register the call provider.",
+                            title = stringResource(R.string.settings_phone_permissions_required_title),
+                            subtitle = stringResource(R.string.settings_phone_permissions_required_subtitle),
                             onClick = onRequestPermissions,
                             containerColor = MaterialTheme.colorScheme.errorContainer,
                             contentColor = MaterialTheme.colorScheme.onErrorContainer
@@ -215,15 +216,15 @@ fun SettingsScreen(
                 item {
                     PreferenceCard(
                         icon = Icons.Outlined.Phone,
-                        title = "Provider name",
-                        subtitle = "Shown in Calling Accounts",
+                        title = stringResource(R.string.settings_provider_name_title),
+                        subtitle = stringResource(R.string.settings_provider_name_subtitle),
                         onClick = null,
                         contentColor = MaterialTheme.colorScheme.onSurface
                     ) {
                         ExpressiveTextField(
                             value = state.providerName,
                             onValueChange = viewModel::onProviderNameChange,
-                            label = "Provider name",
+                            label = stringResource(R.string.settings_provider_name_label),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -232,8 +233,8 @@ fun SettingsScreen(
                 item {
                     PreferenceCard(
                         icon = Icons.Outlined.CheckCircle,
-                        title = "Save & register provider",
-                        subtitle = "Make this account available for incoming calls.",
+                        title = stringResource(R.string.settings_save_provider_title),
+                        subtitle = stringResource(R.string.settings_save_provider_subtitle),
                         onClick = viewModel::saveProvider
                     )
                 }
@@ -241,25 +242,25 @@ fun SettingsScreen(
                 item {
                     PreferenceCard(
                         icon = Icons.Outlined.Settings,
-                        title = "Enable provider in system",
+                        title = stringResource(R.string.settings_enable_provider_title),
                         subtitle = if (state.isProviderEnabled) {
-                            "Provider is enabled."
+                            stringResource(R.string.settings_provider_enabled)
                         } else {
-                            "Open Calling Accounts to enable it."
+                            stringResource(R.string.settings_provider_disabled)
                         },
                         onClick = { openCallingAccounts(context, viewModel) }
                     )
                 }
 
                 item {
-                    PreferenceCategoryHeader("Audio")
+                    PreferenceCategoryHeader(stringResource(R.string.settings_category_audio))
                 }
 
                 item {
                     PreferenceCard(
                         icon = Icons.Outlined.MusicNote,
-                        title = "Select audio file",
-                        subtitle = "Current: ${state.selectedAudioName.ifBlank { "Default" }}",
+                        title = stringResource(R.string.settings_select_audio_title),
+                        subtitle = stringResource(R.string.settings_select_audio_subtitle, state.selectedAudioName.ifBlank { stringResource(R.string.default_audio_name) }),
                         onClick = { audioPickerLauncher.launch(arrayOf("audio/*")) }
                     )
                 }
@@ -267,8 +268,8 @@ fun SettingsScreen(
                 item {
                     PreferenceCard(
                         icon = Icons.Outlined.VolumeOff,
-                        title = "Use default audio",
-                        subtitle = "Disable custom audio playback.",
+                        title = stringResource(R.string.settings_use_default_audio_title),
+                        subtitle = stringResource(R.string.settings_use_default_audio_subtitle),
                         onClick = viewModel::clearAudioSelection
                     )
                 }
@@ -276,8 +277,8 @@ fun SettingsScreen(
                 item {
                     PreferenceCard(
                         icon = Icons.Outlined.Mic,
-                        title = "Microphone recording",
-                        subtitle = if (state.isRecordingEnabled) "Enabled" else "Disabled",
+                        title = stringResource(R.string.settings_mic_recording_title),
+                        subtitle = if (state.isRecordingEnabled) stringResource(R.string.settings_mic_recording_enabled) else stringResource(R.string.settings_mic_recording_disabled),
                         onClick = null,
                         trailingContent = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -297,14 +298,14 @@ fun SettingsScreen(
                 }
 
                 item {
-                    PreferenceCategoryHeader("Storage")
+                    PreferenceCategoryHeader(stringResource(R.string.settings_category_storage))
                 }
 
                 item {
                     PreferenceCard(
                         icon = Icons.Outlined.Folder,
-                        title = "Recording folder",
-                        subtitle = "Save to: ${state.recordingsFolderName}",
+                        title = stringResource(R.string.settings_recording_folder_title),
+                        subtitle = stringResource(R.string.settings_recording_folder_subtitle, state.recordingsFolderName),
                         onClick = { recordingsFolderLauncher.launch(null) }
                     )
                 }
@@ -312,21 +313,21 @@ fun SettingsScreen(
                 item {
                     PreferenceCard(
                         icon = Icons.Outlined.Refresh,
-                        title = "Reset recording folder",
-                        subtitle = "Use Downloads/FakeCall",
+                        title = stringResource(R.string.settings_reset_recording_folder_title),
+                        subtitle = stringResource(R.string.settings_reset_recording_folder_subtitle),
                         onClick = viewModel::clearRecordingFolderSelection
                     )
                 }
 
                 item {
-                    PreferenceCategoryHeader("Automation")
+                    PreferenceCategoryHeader(stringResource(R.string.settings_category_automation))
                 }
 
                 item {
                     PreferenceCard(
                         icon = Icons.Outlined.AccessTime,
-                        title = "Automation & Quick Trigger Defaults",
-                        subtitle = "Used by external intents and the accessibility shortcut.",
+                        title = stringResource(R.string.settings_automation_title),
+                        subtitle = stringResource(R.string.settings_automation_subtitle),
                         onClick = null,
                         trailingContent = null
                     ) {
@@ -334,13 +335,13 @@ fun SettingsScreen(
                             ExpressiveTextField(
                                 value = state.quickTriggerCallerName,
                                 onValueChange = viewModel::onQuickTriggerCallerNameChange,
-                                label = "Default caller name",
+                                label = stringResource(R.string.settings_default_caller_name_label),
                                 modifier = Modifier.fillMaxWidth()
                             )
                             ExpressiveTextField(
                                 value = state.quickTriggerCallerNumber,
                                 onValueChange = viewModel::onQuickTriggerCallerNumberChange,
-                                label = "Default caller number",
+                                label = stringResource(R.string.settings_default_caller_number_label),
                                 modifier = Modifier.fillMaxWidth()
                             )
                             Box(modifier = Modifier.fillMaxWidth()) {
@@ -348,7 +349,7 @@ fun SettingsScreen(
                                     value = FakeCallViewModel.formatDelay(state.quickTriggerDelaySeconds),
                                     onValueChange = {},
                                     readOnly = true,
-                                    label = { Text("Default delay") },
+                                    label = { Text(stringResource(R.string.settings_default_delay_label)) },
                                     trailingIcon = {
                                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = quickTriggerDelayExpanded)
                                     },
@@ -381,7 +382,7 @@ fun SettingsScreen(
                                 }
                             }
                             Text(
-                                text = "Quick triggers reuse the audio configured in the Audio section above, including your selected file or default playback behavior.",
+                                text = stringResource(R.string.settings_quick_triggers_audio_note),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -391,17 +392,17 @@ fun SettingsScreen(
                                     .fillMaxWidth()
                                     .bounceClick()
                             ) {
-                                Text("Open Accessibility Settings")
+                                Text(stringResource(R.string.settings_open_accessibility_settings))
                             }
                             Text(
-                                text = "Enable the FakeCall accessibility service there to use the system accessibility button or shortcut for instant scheduling.",
+                                text = stringResource(R.string.settings_accessibility_note),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             ExpressiveTextField(
                                 value = state.quickTriggerPresetName,
                                 onValueChange = viewModel::onQuickTriggerPresetNameChange,
-                                label = "Preset name (optional)",
+                                label = stringResource(R.string.settings_preset_name_label),
                                 modifier = Modifier.fillMaxWidth()
                             )
                             FilledTonalButton(
@@ -411,11 +412,11 @@ fun SettingsScreen(
                                     .bounceClick(enabled = state.quickTriggerPresets.size < QuickTriggerManager.MAX_PRESETS),
                                 enabled = state.quickTriggerPresets.size < QuickTriggerManager.MAX_PRESETS
                             ) {
-                                Text("Save Current Defaults As Preset (${state.quickTriggerPresets.size}/${QuickTriggerManager.MAX_PRESETS})")
+                                Text(stringResource(R.string.settings_save_preset_button, state.quickTriggerPresets.size, QuickTriggerManager.MAX_PRESETS))
                             }
                             if (state.quickTriggerPresets.isEmpty()) {
                                 Text(
-                                    text = "No quick trigger presets yet. Save one to expose it as launcher app action and Quick Settings tile.",
+                                    text = stringResource(R.string.settings_no_quick_trigger_presets),
                                     style = MaterialTheme.typography.labelLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -433,12 +434,12 @@ fun SettingsScreen(
                                             verticalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
                                             Text(
-                                                text = "Preset ${index + 1}: ${preset.title}",
+                                                text = stringResource(R.string.settings_preset_entry_title, index + 1, preset.title),
                                                 style = MaterialTheme.typography.titleSmall,
                                                 color = MaterialTheme.colorScheme.onSurface
                                             )
                                             Text(
-                                                text = "${preset.callerName.ifBlank { "Unknown Caller" }} • ${preset.callerNumber} • ${FakeCallViewModel.formatDelay(preset.delaySeconds)}",
+                                                text = "${preset.callerName.ifBlank { stringResource(R.string.settings_preset_unknown_caller) }} • ${preset.callerNumber} • ${FakeCallViewModel.formatDelay(preset.delaySeconds)}",
                                                 style = MaterialTheme.typography.labelLarge,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
@@ -451,13 +452,13 @@ fun SettingsScreen(
                                                     onClick = { viewModel.applyQuickTriggerPreset(index + 1) },
                                                     modifier = Modifier.bounceClick()
                                                 ) {
-                                                    Text("Apply To Defaults")
+                                                    Text(stringResource(R.string.settings_apply_to_defaults))
                                                 }
                                                 TextButton(
                                                     onClick = { viewModel.removeQuickTriggerPreset(index + 1) },
                                                     modifier = Modifier.bounceClick()
                                                 ) {
-                                                    Text("Remove")
+                                                    Text(stringResource(R.string.action_remove))
                                                 }
                                             }
                                         }
@@ -465,12 +466,12 @@ fun SettingsScreen(
                                 }
                             }
                             Text(
-                                text = "Presets appear as app actions on launcher long-press and as Quick Settings tiles (Preset 1-5).",
+                                text = stringResource(R.string.settings_presets_note),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = "Action: `com.upnp.fakeCall.TRIGGER` with extras `caller_name`, `caller_number`, and `delay`.",
+                                text = stringResource(R.string.settings_automation_action_note),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -479,14 +480,14 @@ fun SettingsScreen(
                 }
 
                 item {
-                    PreferenceCategoryHeader("Mailbox (IVR)")
+                    PreferenceCategoryHeader(stringResource(R.string.settings_category_mailbox))
                 }
 
                 item {
                     PreferenceCard(
                         icon = Icons.Outlined.Folder,
-                        title = "Import mailbox XML",
-                        subtitle = "Load a saved IVR tree.",
+                        title = stringResource(R.string.settings_import_mailbox_title),
+                        subtitle = stringResource(R.string.settings_import_mailbox_subtitle),
                         onClick = { ivrImportLauncher.launch(arrayOf("text/xml", "application/xml")) }
                     )
                 }
@@ -494,8 +495,8 @@ fun SettingsScreen(
                 item {
                     PreferenceCard(
                         icon = Icons.Outlined.Refresh,
-                        title = "Export mailbox XML",
-                        subtitle = "Share your current IVR tree.",
+                        title = stringResource(R.string.settings_export_mailbox_title),
+                        subtitle = stringResource(R.string.settings_export_mailbox_subtitle),
                         onClick = { ivrExportLauncher.launch("fakecall_mailbox.xml") }
                     )
                 }
@@ -503,8 +504,8 @@ fun SettingsScreen(
                 item {
                     PreferenceCard(
                         icon = Icons.Outlined.Add,
-                        title = "Add menu node",
-                        subtitle = "Create a new IVR menu.",
+                        title = stringResource(R.string.settings_add_node_title),
+                        subtitle = stringResource(R.string.settings_add_node_subtitle),
                         onClick = { showAddNodeDialog = true }
                     )
                 }
@@ -512,7 +513,7 @@ fun SettingsScreen(
                 if (ivrNodes.isEmpty()) {
                     item {
                         Text(
-                            text = "No mailbox nodes yet.",
+                            text = stringResource(R.string.settings_no_mailbox_nodes),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -570,12 +571,12 @@ fun SettingsScreen(
                             verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
                             Text(
-                                text = "About & Updates",
+                                text = stringResource(R.string.settings_about_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Current Version: ${BuildConfig.VERSION_NAME}",
+                                text = stringResource(R.string.settings_current_version, BuildConfig.VERSION_NAME),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -598,12 +599,12 @@ fun SettingsScreen(
                                     )
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = "GitHub Repository",
+                                            text = stringResource(R.string.settings_github_repo),
                                             style = MaterialTheme.typography.titleSmall,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Text(
-                                            text = "DDOneApps/FakeCall",
+                                            text = stringResource(R.string.settings_github_repo_name),
                                             style = MaterialTheme.typography.labelLarge,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -626,13 +627,13 @@ fun SettingsScreen(
                                                 updateDialogRelease = result.release
                                             }
                                             UpdateCheckResult.UpToDate -> {
-                                                snackbarHostState.showSnackbar("You are on the latest version.")
+                                                snackbarHostState.showSnackbar(context.getString(R.string.snackbar_up_to_date))
                                             }
                                             UpdateCheckResult.RateLimited -> {
-                                                snackbarHostState.showSnackbar("GitHub rate limit reached. Try again later.")
+                                                snackbarHostState.showSnackbar(context.getString(R.string.snackbar_rate_limited))
                                             }
                                             UpdateCheckResult.Unavailable -> {
-                                                snackbarHostState.showSnackbar("Couldn't check for updates right now.")
+                                                snackbarHostState.showSnackbar(context.getString(R.string.snackbar_update_unavailable))
                                             }
                                         }
                                         isCheckingUpdates = false
@@ -651,9 +652,9 @@ fun SettingsScreen(
                                         color = MaterialTheme.colorScheme.onSecondaryContainer
                                     )
                                     Spacer(modifier = Modifier.width(10.dp))
-                                    Text("Checking...")
+                                    Text(stringResource(R.string.settings_checking_updates))
                                 } else {
-                                    Text("Check for Updates")
+                                    Text(stringResource(R.string.settings_check_for_updates))
                                 }
                             }
                         }
@@ -694,9 +695,9 @@ fun SettingsScreen(
     if (release != null) {
         AlertDialog(
             onDismissRequest = { updateDialogRelease = null },
-            title = { Text("Update Available") },
+            title = { Text(stringResource(R.string.dialog_update_available_title)) },
             text = {
-                Text("Version ${release.tagName} is available on GitHub Releases.")
+                Text(stringResource(R.string.dialog_update_available_text, release.tagName))
             },
             confirmButton = {
                 Button(
@@ -706,7 +707,7 @@ fun SettingsScreen(
                     },
                     modifier = Modifier.bounceClick()
                 ) {
-                    Text("Update Now")
+                    Text(stringResource(R.string.action_update_now))
                 }
             },
             dismissButton = {
@@ -714,7 +715,7 @@ fun SettingsScreen(
                     onClick = { updateDialogRelease = null },
                     modifier = Modifier.bounceClick()
                 ) {
-                    Text("Later")
+                    Text(stringResource(R.string.action_later))
                 }
             }
         )
@@ -836,48 +837,48 @@ private fun MailboxNodeCard(
                     if (isRoot) {
                         androidx.compose.material3.AssistChip(
                             onClick = {},
-                            label = { Text("Root menu") },
+                            label = { Text(stringResource(R.string.settings_root_menu)) },
                             leadingIcon = { androidx.compose.material3.Icon(Icons.Outlined.Star, contentDescription = null) }
                         )
                     } else {
                         TextButton(onClick = onSetRoot, modifier = Modifier.bounceClick()) {
                             androidx.compose.material3.Icon(Icons.Outlined.StarBorder, contentDescription = null)
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Set as root")
+                            Text(stringResource(R.string.settings_set_as_root))
                         }
                     }
                 }
                 androidx.compose.material3.IconButton(onClick = onDelete, modifier = Modifier.bounceClick()) {
-                    androidx.compose.material3.Icon(Icons.Outlined.Delete, contentDescription = "Delete node")
+                    androidx.compose.material3.Icon(Icons.Outlined.Delete, contentDescription = stringResource(R.string.cd_delete_node))
                 }
             }
 
             PreferenceCard(
                 icon = Icons.Outlined.MusicNote,
-                title = "Node audio",
-                subtitle = node.audioLabel.ifBlank { "No audio selected" },
+                title = stringResource(R.string.settings_node_audio_title),
+                subtitle = node.audioLabel.ifBlank { stringResource(R.string.settings_no_audio_selected) },
                 onClick = null,
                 trailingContent = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         androidx.compose.material3.IconButton(onClick = onSelectAudio, modifier = Modifier.bounceClick()) {
-                            androidx.compose.material3.Icon(Icons.Outlined.Folder, contentDescription = "Select audio")
+                            androidx.compose.material3.Icon(Icons.Outlined.Folder, contentDescription = stringResource(R.string.cd_select_audio))
                         }
                         androidx.compose.material3.IconButton(onClick = onClearAudio, modifier = Modifier.bounceClick()) {
-                            androidx.compose.material3.Icon(Icons.Outlined.Close, contentDescription = "Clear audio")
+                            androidx.compose.material3.Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.cd_clear_audio))
                         }
                     }
                 }
             )
 
             Text(
-                text = "Digit mappings (0 = back)",
+                text = stringResource(R.string.settings_digit_mappings),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             if (node.routes.isEmpty()) {
                 Text(
-                    text = "No mappings yet.",
+                    text = stringResource(R.string.settings_no_mappings),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -886,8 +887,9 @@ private fun MailboxNodeCard(
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    val unknownLabel = stringResource(R.string.label_unknown)
                     node.routes.toSortedMap().forEach { (digit, target) ->
-                        val title = nodes.firstOrNull { it.id == target }?.title ?: "Unknown"
+                        val title = nodes.firstOrNull { it.id == target }?.title ?: unknownLabel
                         androidx.compose.material3.InputChip(
                             selected = false,
                             onClick = {},
@@ -897,7 +899,7 @@ private fun MailboxNodeCard(
                                     onClick = { onRemoveMapping(digit) },
                                     modifier = Modifier.bounceClick()
                                 ) {
-                                    androidx.compose.material3.Icon(Icons.Outlined.Close, contentDescription = "Remove mapping")
+                                    androidx.compose.material3.Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.cd_remove_mapping))
                                 }
                             },
                             shape = RoundedCornerShape(999.dp)
@@ -909,7 +911,7 @@ private fun MailboxNodeCard(
             Button(onClick = onAddMapping, modifier = Modifier.bounceClick()) {
                 androidx.compose.material3.Icon(Icons.Outlined.Add, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Add mapping")
+                Text(stringResource(R.string.action_add_mapping))
             }
         }
     }
@@ -924,23 +926,23 @@ private fun AddNodeDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("New mailbox node") },
+        title = { Text(stringResource(R.string.dialog_new_node_title)) },
         text = {
             ExpressiveTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = "Node title",
+                label = stringResource(R.string.dialog_node_title_label),
                 modifier = Modifier.fillMaxWidth()
             )
         },
         confirmButton = {
             Button(onClick = { onConfirm(name) }, modifier = Modifier.bounceClick()) {
-                Text("Create")
+                Text(stringResource(R.string.action_create))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss, modifier = Modifier.bounceClick()) {
-                Text("Cancel")
+                Text(stringResource(R.string.action_cancel))
             }
         }
     )
@@ -965,7 +967,7 @@ private fun MappingDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add mapping") },
+        title = { Text(stringResource(R.string.dialog_add_mapping_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(modifier = Modifier.fillMaxWidth()) {
@@ -973,7 +975,7 @@ private fun MappingDialog(
                         value = selectedDigit.toString(),
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Digit") },
+                        label = { Text(stringResource(R.string.dialog_digit_label)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = digitExpanded) },
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -1006,7 +1008,7 @@ private fun MappingDialog(
                         value = availableTargets.firstOrNull { it.id == selectedTargetId }?.title.orEmpty(),
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Target node") },
+                        label = { Text(stringResource(R.string.dialog_target_node_label)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = targetExpanded) },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = availableTargets.isNotEmpty()
@@ -1038,7 +1040,7 @@ private fun MappingDialog(
 
                 if (availableTargets.isEmpty()) {
                     Text(
-                        text = "Add another node to create mappings.",
+                        text = stringResource(R.string.dialog_add_another_node),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1051,12 +1053,12 @@ private fun MappingDialog(
                 enabled = canConfirm,
                 modifier = Modifier.bounceClick(enabled = canConfirm)
             ) {
-                Text("Add")
+                Text(stringResource(R.string.action_add))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss, modifier = Modifier.bounceClick()) {
-                Text("Cancel")
+                Text(stringResource(R.string.action_cancel))
             }
         }
     )
