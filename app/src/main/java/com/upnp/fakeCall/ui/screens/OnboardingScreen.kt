@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.upnp.fakeCall.FakeCallViewModel
+import com.upnp.fakeCall.R
 import com.upnp.fakeCall.ui.components.AnimatedIcon
 import com.upnp.fakeCall.ui.components.ExpressiveButton
 import com.upnp.fakeCall.ui.components.ExpressiveCardShape

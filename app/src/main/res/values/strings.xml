@@ -84,6 +84,9 @@
     <string name="settings_category_automation">Automation</string>
     <string name="settings_automation_title">Automation &amp; Quick Trigger Defaults</string>
     <string name="settings_automation_subtitle">Used by external intents and the accessibility shortcut.</string>
+    <string name="settings_automation_hub_subtitle">Manage external triggers, accessibility shortcut and defaults in one place.</string>
+    <string name="settings_automation_defaults_title">Quick Trigger Defaults</string>
+    <string name="settings_automation_api_title">Automation API</string>
     <string name="settings_default_caller_name_label">Default caller name</string>
     <string name="settings_default_caller_number_label">Default caller number</string>
     <string name="settings_default_delay_label">Default delay</string>
@@ -99,6 +102,7 @@
     <string name="settings_presets_note">Presets appear as app actions on launcher long-press and as Quick Settings tiles (Preset 1-5).</string>
     <string name="settings_automation_action_note">Action: `com.upnp.fakeCall.TRIGGER` with extras `caller_name`, `caller_number`, and `delay`.</string>
     <string name="settings_category_mailbox">Mailbox (IVR)</string>
+    <string name="settings_mailbox_hub_subtitle">Manage IVR nodes, mappings, and import/export without cluttering main settings.</string>
     <string name="settings_import_mailbox_title">Import mailbox XML</string>
     <string name="settings_import_mailbox_subtitle">Load a saved IVR tree.</string>
     <string name="settings_export_mailbox_title">Export mailbox XML</string>
@@ -180,6 +184,11 @@
 
     <!-- Quick Trigger Tile -->
     <string name="tile_preset_label">Preset %d</string>
+    <string name="tile_service_preset_1">FakeCall Preset 1</string>
+    <string name="tile_service_preset_2">FakeCall Preset 2</string>
+    <string name="tile_service_preset_3">FakeCall Preset 3</string>
+    <string name="tile_service_preset_4">FakeCall Preset 4</string>
+    <string name="tile_service_preset_5">FakeCall Preset 5</string>
     <string name="tile_not_configured">Not configured</string>
     <string name="toast_triggering_now">Triggering Fake Call now\u2026</string>
     <string name="toast_scheduled_in">Fake Call scheduled in %d seconds</string>
@@ -194,6 +203,9 @@
 
     <!-- Misc labels -->
     <string name="label_unknown">Unknown</string>
+    <string name="label_version_prefix">v</string>
+    <string name="delay_now">Now</string>
+    <string name="settings_mapping_chip_label">%1$s → %2$s</string>
 
     <!-- Status messages -->
     <string name="status_grant_permissions">Grant phone permissions to continue.</string>

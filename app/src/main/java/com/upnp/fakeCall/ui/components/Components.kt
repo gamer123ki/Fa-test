@@ -66,6 +66,7 @@ import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.VolumeUp
 import com.upnp.fakeCall.CustomPreset
 import com.upnp.fakeCall.FakeCallViewModel
+import com.upnp.fakeCall.R
 
 fun <T> expressiveSpring() = spring<T>(
     dampingRatio = Spring.DampingRatioMediumBouncy,
@@ -325,6 +326,7 @@ fun TimingSelectionCard(
     formatPreset: (CustomPreset) -> String,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     SectionCard(
         title = stringResource(R.string.timing_title),
         modifier = modifier
@@ -352,7 +354,7 @@ fun TimingSelectionCard(
                     onClick = { onPresetSelected(option) },
                     shape = SegmentedButtonDefaults.itemShape(index = index, count = count),
                     modifier = Modifier.bounceClick(),
-                    label = { Text(FakeCallViewModel.formatDelay(option)) }
+                    label = { Text(FakeCallViewModel.formatDelay(context, option)) }
                 )
             }
         }

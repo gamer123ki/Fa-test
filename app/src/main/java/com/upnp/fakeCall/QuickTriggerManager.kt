@@ -250,7 +250,7 @@ object QuickTriggerManager {
         val shortcuts = presets.mapIndexed { index, preset ->
             val slot = index + 1
             val shortLabel = preset.title.ifBlank { context.getString(R.string.tile_preset_label, slot) }.take(10)
-            val longLabel = "${preset.title} • ${formatDelay(preset.delaySeconds)}"
+            val longLabel = "${preset.title} • ${formatDelay(context, preset.delaySeconds)}"
             val intent = Intent(context, ShortcutTriggerActivity::class.java).apply {
                 action = ACTION_TRIGGER_PRESET
                 putExtra(EXTRA_PRESET_SLOT, slot)
@@ -384,12 +384,7 @@ object QuickTriggerManager {
         }
     }
 
-    private fun formatDelay(seconds: Int): String {
-        return when {
-            seconds <= 0 -> "Now"
-            seconds < 60 -> "${seconds}s"
-            seconds % 60 == 0 -> "${seconds / 60}m"
-            else -> "${seconds / 60}m ${seconds % 60}s"
-        }
+    private fun formatDelay(context: Context, seconds: Int): String {
+        return DelayFormatter.formatShort(context, seconds)
     }
 }

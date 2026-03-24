@@ -84,6 +84,9 @@
     <string name="settings_category_automation">Αυτοματισμός</string>
     <string name="settings_automation_title">Αυτοματισμός και προεπιλεγμένες ρυθμίσεις γρήγορης ενεργοποίησης</string>
     <string name="settings_automation_subtitle">Χρησιμοποιούνται από εξωτερικές προθέσεις και τη συντόμευση προσβασιμότητας.</string>
+    <string name="settings_automation_hub_subtitle">Διαχειριστείτε εξωτερικά triggers, τη συντόμευση προσβασιμότητας και τις προεπιλογές σε ένα σημείο.</string>
+    <string name="settings_automation_defaults_title">Προεπιλογές Quick Trigger</string>
+    <string name="settings_automation_api_title">Automation API</string>
     <string name="settings_default_caller_name_label">Προεπιλεγμένο όνομα καλούντος</string>
     <string name="settings_default_caller_number_label">Προεπιλεγμένος αριθμός καλούντος</string>
     <string name="settings_default_delay_label">Προεπιλεγμένη καθυστέρηση</string>
@@ -99,6 +102,7 @@
     <string name="settings_presets_note">Οι προρυθμίσεις εμφανίζονται ως συντομεύσεις του εικονιδίου της εφαρμογής και ως πλακίδια γρήγορων ρυθμίσεων (Προρύθμιση 1-5).</string>
     <string name="settings_automation_action_note">Δράση: `com.upnp.fakeCall.TRIGGER` με επιπλέον `caller_name`, `caller_number` και `delay`.</string>
     <string name="settings_category_mailbox">Γραμματοκιβώτιο (IVR)</string>
+    <string name="settings_mailbox_hub_subtitle">Διαχειριστείτε κόμβους IVR, αντιστοιχίσεις και εισαγωγή/εξαγωγή χωρίς υπερφόρτωση των κύριων ρυθμίσεων.</string>
     <string name="settings_import_mailbox_title">Εισαγωγή XML γραμματοκιβωτίου</string>
     <string name="settings_import_mailbox_subtitle">Φόρτωση αποθηκευμένου δέντρου IVR.</string>
     <string name="settings_export_mailbox_title">Εξαγωγή XML γραμματοκιβωτίου</string>
@@ -180,6 +184,11 @@
 
     <!-- Quick Trigger Tile -->
     <string name="tile_preset_label">Προρύθμιση %d</string>
+    <string name="tile_service_preset_1">Προρύθμιση FakeCall 1</string>
+    <string name="tile_service_preset_2">Προρύθμιση FakeCall 2</string>
+    <string name="tile_service_preset_3">Προρύθμιση FakeCall 3</string>
+    <string name="tile_service_preset_4">Προρύθμιση FakeCall 4</string>
+    <string name="tile_service_preset_5">Προρύθμιση FakeCall 5</string>
     <string name="tile_not_configured">Δεν έχει ρυθμιστεί</string>
     <string name="toast_triggering_now">Ενεργοποίηση Fake Call τώρα...</string>
     <string name="toast_scheduled_in">Fake Call προγραμματισμένη σε %d δευτερόλεπτα</string>
@@ -194,6 +203,9 @@
 
     <!-- Misc labels -->
     <string name="label_unknown">Άγνωστο</string>
+    <string name="label_version_prefix">v</string>
+    <string name="delay_now">Τώρα</string>
+    <string name="settings_mapping_chip_label">%1$s → %2$s</string>
 
     <!-- Status messages -->
     <string name="status_grant_permissions">Χορηγήστε άδειες τηλεφώνου για να συνεχίσετε.</string>

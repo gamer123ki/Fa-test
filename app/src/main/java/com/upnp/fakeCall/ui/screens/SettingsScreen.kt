@@ -4,9 +4,20 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -78,20 +89,26 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.lerp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.upnp.fakeCall.BuildConfig
 import com.upnp.fakeCall.FakeCallViewModel
 import com.upnp.fakeCall.QuickTriggerManager
 import com.upnp.fakeCall.ReleaseInfo
+import com.upnp.fakeCall.R
 import com.upnp.fakeCall.UpdateCheckResult
 import com.upnp.fakeCall.ivr.IvrNode
 import com.upnp.fakeCall.ui.components.AnimatedIcon
 import com.upnp.fakeCall.ui.components.ExpressiveTextField
 import com.upnp.fakeCall.ui.components.bounceClick
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -115,6 +132,8 @@ fun SettingsScreen(
     var isCheckingUpdates by rememberSaveable { mutableStateOf(false) }
     var quickTriggerDelayExpanded by rememberSaveable { mutableStateOf(false) }
     var updateDialogRelease by remember { mutableStateOf<ReleaseInfo?>(null) }
+    var activeSubmenu by rememberSaveable { mutableStateOf(SettingsSubmenu.MAIN) }
+    var backGestureProgress by remember { mutableStateOf(0f) }
 
     val audioPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -149,6 +168,31 @@ fun SettingsScreen(
         viewModel.importIvrConfig(uri)
     }
 
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        PredictiveBackHandler(enabled = activeSubmenu != SettingsSubmenu.MAIN) { progress ->
+            try {
+                progress.collect { event ->
+                    backGestureProgress = event.progress
+                }
+                activeSubmenu = SettingsSubmenu.MAIN
+                backGestureProgress = 0f
+            } catch (_: CancellationException) {
+                backGestureProgress = 0f
+            }
+        }
+    } else {
+        BackHandler(enabled = activeSubmenu != SettingsSubmenu.MAIN) {
+            backGestureProgress = 0f
+            activeSubmenu = SettingsSubmenu.MAIN
+        }
+    }
+
+    val settingsTitle = when (activeSubmenu) {
+        SettingsSubmenu.MAIN -> stringResource(R.string.settings_title)
+        SettingsSubmenu.AUTOMATION -> stringResource(R.string.settings_automation_title)
+        SettingsSubmenu.MAILBOX -> stringResource(R.string.settings_category_mailbox)
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -173,368 +217,452 @@ fun SettingsScreen(
                         shape = CircleShape,
                         backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                         tint = MaterialTheme.colorScheme.onSurface,
-                        onClick = onBack
+                        onClick = {
+                            if (activeSubmenu == SettingsSubmenu.MAIN) {
+                                onBack()
+                            } else {
+                                activeSubmenu = SettingsSubmenu.MAIN
+                            }
+                        }
                     )
                     Text(
-                        text = stringResource(R.string.settings_title),
-                        style = MaterialTheme.typography.displayMedium,
+                        text = settingsTitle,
+                        style = if (activeSubmenu == SettingsSubmenu.MAIN) {
+                            MaterialTheme.typography.displayMedium
+                        } else {
+                            MaterialTheme.typography.displaySmall
+                        },
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
         ) { innerPadding ->
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
-                    .padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(18.dp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                    top = 8.dp,
-                    bottom = 24.dp
-                )
-            ) {
-                item {
-                    PreferenceCategoryHeader(stringResource(R.string.settings_category_provider))
-                }
+            AnimatedContent(
+                targetState = activeSubmenu,
+                transitionSpec = {
+                    val slideSpec = tween<IntOffset>(durationMillis = 380, easing = FastOutSlowInEasing)
+                    val fadeSpec = tween<Float>(durationMillis = 180, easing = FastOutSlowInEasing)
+                    when {
+                        initialState == SettingsSubmenu.MAIN && targetState != SettingsSubmenu.MAIN -> {
+                            slideInHorizontally(animationSpec = slideSpec) { fullWidth -> fullWidth } + fadeIn(animationSpec = fadeSpec) togetherWith
+                                slideOutHorizontally(animationSpec = slideSpec) { fullWidth -> -fullWidth } + fadeOut(animationSpec = fadeSpec)
+                        }
 
-                if (!state.hasRequiredPermissions) {
+                        initialState != SettingsSubmenu.MAIN && targetState == SettingsSubmenu.MAIN -> {
+                            slideInHorizontally(animationSpec = slideSpec) { fullWidth -> -fullWidth } + fadeIn(animationSpec = fadeSpec) togetherWith
+                                slideOutHorizontally(animationSpec = slideSpec) { fullWidth -> fullWidth } + fadeOut(animationSpec = fadeSpec)
+                        }
+
+                        else -> {
+                            fadeIn(animationSpec = fadeSpec) togetherWith fadeOut(animationSpec = fadeSpec)
+                        }
+                    }
+                },
+                label = "settingsSubmenuTransition"
+            ) { submenu ->
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
+                        .padding(horizontal = 20.dp)
+                        .graphicsLayer {
+                            if (submenu != SettingsSubmenu.MAIN) {
+                                translationX = lerp(0f, 120f, backGestureProgress)
+                            }
+                        },
+                    verticalArrangement = Arrangement.spacedBy(18.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        top = 8.dp,
+                        bottom = 24.dp
+                    )
+                ) {
+                if (submenu == SettingsSubmenu.MAIN) {
+                    item {
+                        PreferenceCategoryHeader(stringResource(R.string.settings_category_provider))
+                    }
+
+                    if (!state.hasRequiredPermissions) {
+                        item {
+                            PreferenceCard(
+                                icon = Icons.Outlined.Phone,
+                                title = stringResource(R.string.settings_phone_permissions_required_title),
+                                subtitle = stringResource(R.string.settings_phone_permissions_required_subtitle),
+                                onClick = onRequestPermissions,
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                contentColor = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
+                    }
+
                     item {
                         PreferenceCard(
                             icon = Icons.Outlined.Phone,
-                            title = stringResource(R.string.settings_phone_permissions_required_title),
-                            subtitle = stringResource(R.string.settings_phone_permissions_required_subtitle),
-                            onClick = onRequestPermissions,
-                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                            contentColor = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
-                }
-
-                item {
-                    PreferenceCard(
-                        icon = Icons.Outlined.Phone,
-                        title = stringResource(R.string.settings_provider_name_title),
-                        subtitle = stringResource(R.string.settings_provider_name_subtitle),
-                        onClick = null,
-                        contentColor = MaterialTheme.colorScheme.onSurface
-                    ) {
-                        ExpressiveTextField(
-                            value = state.providerName,
-                            onValueChange = viewModel::onProviderNameChange,
-                            label = stringResource(R.string.settings_provider_name_label),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-
-                item {
-                    PreferenceCard(
-                        icon = Icons.Outlined.CheckCircle,
-                        title = stringResource(R.string.settings_save_provider_title),
-                        subtitle = stringResource(R.string.settings_save_provider_subtitle),
-                        onClick = viewModel::saveProvider
-                    )
-                }
-
-                item {
-                    PreferenceCard(
-                        icon = Icons.Outlined.Settings,
-                        title = stringResource(R.string.settings_enable_provider_title),
-                        subtitle = if (state.isProviderEnabled) {
-                            stringResource(R.string.settings_provider_enabled)
-                        } else {
-                            stringResource(R.string.settings_provider_disabled)
-                        },
-                        onClick = { openCallingAccounts(context, viewModel) }
-                    )
-                }
-
-                item {
-                    PreferenceCategoryHeader(stringResource(R.string.settings_category_audio))
-                }
-
-                item {
-                    PreferenceCard(
-                        icon = Icons.Outlined.MusicNote,
-                        title = stringResource(R.string.settings_select_audio_title),
-                        subtitle = stringResource(R.string.settings_select_audio_subtitle, state.selectedAudioName.ifBlank { stringResource(R.string.default_audio_name) }),
-                        onClick = { audioPickerLauncher.launch(arrayOf("audio/*")) }
-                    )
-                }
-
-                item {
-                    PreferenceCard(
-                        icon = Icons.Outlined.VolumeOff,
-                        title = stringResource(R.string.settings_use_default_audio_title),
-                        subtitle = stringResource(R.string.settings_use_default_audio_subtitle),
-                        onClick = viewModel::clearAudioSelection
-                    )
-                }
-
-                item {
-                    PreferenceCard(
-                        icon = Icons.Outlined.Mic,
-                        title = stringResource(R.string.settings_mic_recording_title),
-                        subtitle = if (state.isRecordingEnabled) stringResource(R.string.settings_mic_recording_enabled) else stringResource(R.string.settings_mic_recording_disabled),
-                        onClick = null,
-                        trailingContent = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Switch(
-                                    checked = state.isRecordingEnabled,
-                                    onCheckedChange = viewModel::onRecordingEnabledChange
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                androidx.compose.material3.Icon(
-                                    imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            title = stringResource(R.string.settings_provider_name_title),
+                            subtitle = stringResource(R.string.settings_provider_name_subtitle),
+                            onClick = null,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        ) {
+                            ExpressiveTextField(
+                                value = state.providerName,
+                                onValueChange = viewModel::onProviderNameChange,
+                                label = stringResource(R.string.settings_provider_name_label),
+                                modifier = Modifier.fillMaxWidth()
+                            )
                         }
-                    )
-                }
+                    }
 
-                item {
-                    PreferenceCategoryHeader(stringResource(R.string.settings_category_storage))
-                }
+                    item {
+                        PreferenceCard(
+                            icon = Icons.Outlined.CheckCircle,
+                            title = stringResource(R.string.settings_save_provider_title),
+                            subtitle = stringResource(R.string.settings_save_provider_subtitle),
+                            onClick = viewModel::saveProvider
+                        )
+                    }
 
-                item {
-                    PreferenceCard(
-                        icon = Icons.Outlined.Folder,
-                        title = stringResource(R.string.settings_recording_folder_title),
-                        subtitle = stringResource(R.string.settings_recording_folder_subtitle, state.recordingsFolderName),
-                        onClick = { recordingsFolderLauncher.launch(null) }
-                    )
-                }
+                    item {
+                        PreferenceCard(
+                            icon = Icons.Outlined.Settings,
+                            title = stringResource(R.string.settings_enable_provider_title),
+                            subtitle = if (state.isProviderEnabled) {
+                                stringResource(R.string.settings_provider_enabled)
+                            } else {
+                                stringResource(R.string.settings_provider_disabled)
+                            },
+                            onClick = { openCallingAccounts(context, viewModel) }
+                        )
+                    }
 
-                item {
-                    PreferenceCard(
-                        icon = Icons.Outlined.Refresh,
-                        title = stringResource(R.string.settings_reset_recording_folder_title),
-                        subtitle = stringResource(R.string.settings_reset_recording_folder_subtitle),
-                        onClick = viewModel::clearRecordingFolderSelection
-                    )
-                }
+                    item {
+                        PreferenceCategoryHeader(stringResource(R.string.settings_category_audio))
+                    }
 
-                item {
-                    PreferenceCategoryHeader(stringResource(R.string.settings_category_automation))
-                }
+                    item {
+                        PreferenceCard(
+                            icon = Icons.Outlined.MusicNote,
+                            title = stringResource(R.string.settings_select_audio_title),
+                            subtitle = stringResource(
+                                R.string.settings_select_audio_subtitle,
+                                state.selectedAudioName.ifBlank { stringResource(R.string.default_audio_name) }
+                            ),
+                            onClick = { audioPickerLauncher.launch(arrayOf("audio/*")) }
+                        )
+                    }
 
-                item {
-                    PreferenceCard(
-                        icon = Icons.Outlined.AccessTime,
-                        title = stringResource(R.string.settings_automation_title),
-                        subtitle = stringResource(R.string.settings_automation_subtitle),
-                        onClick = null,
-                        trailingContent = null
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            ExpressiveTextField(
-                                value = state.quickTriggerCallerName,
-                                onValueChange = viewModel::onQuickTriggerCallerNameChange,
-                                label = stringResource(R.string.settings_default_caller_name_label),
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            ExpressiveTextField(
-                                value = state.quickTriggerCallerNumber,
-                                onValueChange = viewModel::onQuickTriggerCallerNumberChange,
-                                label = stringResource(R.string.settings_default_caller_number_label),
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Box(modifier = Modifier.fillMaxWidth()) {
-                                androidx.compose.material3.OutlinedTextField(
-                                    value = FakeCallViewModel.formatDelay(state.quickTriggerDelaySeconds),
-                                    onValueChange = {},
-                                    readOnly = true,
-                                    label = { Text(stringResource(R.string.settings_default_delay_label)) },
-                                    trailingIcon = {
-                                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = quickTriggerDelayExpanded)
-                                    },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(24.dp)
-                                )
-                                Box(
-                                    modifier = Modifier
-                                        .matchParentSize()
-                                        .clickable(
-                                            interactionSource = remember { MutableInteractionSource() },
-                                            indication = null
-                                        ) {
-                                            quickTriggerDelayExpanded = !quickTriggerDelayExpanded
-                                        }
-                                )
-                                DropdownMenu(
-                                    expanded = quickTriggerDelayExpanded,
-                                    onDismissRequest = { quickTriggerDelayExpanded = false }
-                                ) {
-                                    viewModel.delayOptionsSeconds.forEach { delaySeconds ->
-                                        DropdownMenuItem(
-                                            text = { Text(FakeCallViewModel.formatDelay(delaySeconds)) },
-                                            onClick = {
-                                                viewModel.onQuickTriggerDelayChange(delaySeconds)
-                                                quickTriggerDelayExpanded = false
-                                            }
-                                        )
-                                    }
+                    item {
+                        PreferenceCard(
+                            icon = Icons.Outlined.VolumeOff,
+                            title = stringResource(R.string.settings_use_default_audio_title),
+                            subtitle = stringResource(R.string.settings_use_default_audio_subtitle),
+                            onClick = viewModel::clearAudioSelection
+                        )
+                    }
+
+                    item {
+                        PreferenceCard(
+                            icon = Icons.Outlined.Mic,
+                            title = stringResource(R.string.settings_mic_recording_title),
+                            subtitle = if (state.isRecordingEnabled) stringResource(R.string.settings_mic_recording_enabled) else stringResource(R.string.settings_mic_recording_disabled),
+                            onClick = null,
+                            trailingContent = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Switch(
+                                        checked = state.isRecordingEnabled,
+                                        onCheckedChange = viewModel::onRecordingEnabledChange
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    androidx.compose.material3.Icon(
+                                        imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                             }
-                            Text(
-                                text = stringResource(R.string.settings_quick_triggers_audio_note),
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            FilledTonalButton(
-                                onClick = { openAccessibilitySettings(context) },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .bounceClick()
-                            ) {
-                                Text(stringResource(R.string.settings_open_accessibility_settings))
-                            }
-                            Text(
-                                text = stringResource(R.string.settings_accessibility_note),
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            ExpressiveTextField(
-                                value = state.quickTriggerPresetName,
-                                onValueChange = viewModel::onQuickTriggerPresetNameChange,
-                                label = stringResource(R.string.settings_preset_name_label),
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            FilledTonalButton(
-                                onClick = viewModel::saveQuickTriggerPreset,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .bounceClick(enabled = state.quickTriggerPresets.size < QuickTriggerManager.MAX_PRESETS),
-                                enabled = state.quickTriggerPresets.size < QuickTriggerManager.MAX_PRESETS
-                            ) {
-                                Text(stringResource(R.string.settings_save_preset_button, state.quickTriggerPresets.size, QuickTriggerManager.MAX_PRESETS))
-                            }
-                            if (state.quickTriggerPresets.isEmpty()) {
+                        )
+                    }
+
+                    item {
+                        PreferenceCategoryHeader(stringResource(R.string.settings_category_storage))
+                    }
+
+                    item {
+                        PreferenceCard(
+                            icon = Icons.Outlined.Folder,
+                            title = stringResource(R.string.settings_recording_folder_title),
+                            subtitle = stringResource(R.string.settings_recording_folder_subtitle, state.recordingsFolderName),
+                            onClick = { recordingsFolderLauncher.launch(null) }
+                        )
+                    }
+
+                    item {
+                        PreferenceCard(
+                            icon = Icons.Outlined.Refresh,
+                            title = stringResource(R.string.settings_reset_recording_folder_title),
+                            subtitle = stringResource(R.string.settings_reset_recording_folder_subtitle),
+                            onClick = viewModel::clearRecordingFolderSelection
+                        )
+                    }
+                }
+
+                if (submenu == SettingsSubmenu.MAIN) {
+                    item {
+                        PreferenceCategoryHeader(stringResource(R.string.settings_category_automation))
+                    }
+                    item {
+                        PreferenceCard(
+                            icon = Icons.Outlined.AccessTime,
+                            title = stringResource(R.string.settings_automation_title),
+                            subtitle = stringResource(R.string.settings_automation_hub_subtitle),
+                            onClick = { activeSubmenu = SettingsSubmenu.AUTOMATION }
+                        )
+                    }
+                    item {
+                        PreferenceCategoryHeader(stringResource(R.string.settings_category_mailbox))
+                    }
+                    item {
+                        PreferenceCard(
+                            icon = Icons.Outlined.Folder,
+                            title = stringResource(R.string.settings_category_mailbox),
+                            subtitle = stringResource(R.string.settings_mailbox_hub_subtitle),
+                            onClick = { activeSubmenu = SettingsSubmenu.MAILBOX }
+                        )
+                    }
+                }
+
+                if (submenu == SettingsSubmenu.AUTOMATION) {
+                    item {
+                        PreferenceCategoryHeader(stringResource(R.string.settings_category_automation))
+                    }
+                    item {
+                        PreferenceCard(
+                            icon = Icons.Outlined.AccessTime,
+                            title = stringResource(R.string.settings_automation_defaults_title),
+                            subtitle = stringResource(R.string.settings_automation_subtitle),
+                            onClick = null,
+                            trailingContent = null
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                ExpressiveTextField(
+                                    value = state.quickTriggerCallerName,
+                                    onValueChange = viewModel::onQuickTriggerCallerNameChange,
+                                    label = stringResource(R.string.settings_default_caller_name_label),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                ExpressiveTextField(
+                                    value = state.quickTriggerCallerNumber,
+                                    onValueChange = viewModel::onQuickTriggerCallerNumberChange,
+                                    label = stringResource(R.string.settings_default_caller_number_label),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Box(modifier = Modifier.fillMaxWidth()) {
+                                    androidx.compose.material3.OutlinedTextField(
+                                        value = FakeCallViewModel.formatDelay(context, state.quickTriggerDelaySeconds),
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        label = { Text(stringResource(R.string.settings_default_delay_label)) },
+                                        trailingIcon = {
+                                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = quickTriggerDelayExpanded)
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(24.dp)
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .matchParentSize()
+                                            .clickable(
+                                                interactionSource = remember { MutableInteractionSource() },
+                                                indication = null
+                                            ) {
+                                                quickTriggerDelayExpanded = !quickTriggerDelayExpanded
+                                            }
+                                    )
+                                    DropdownMenu(
+                                        expanded = quickTriggerDelayExpanded,
+                                        onDismissRequest = { quickTriggerDelayExpanded = false }
+                                    ) {
+                                        viewModel.delayOptionsSeconds.forEach { delaySeconds ->
+                                            DropdownMenuItem(
+                                                text = { Text(FakeCallViewModel.formatDelay(context, delaySeconds)) },
+                                                onClick = {
+                                                    viewModel.onQuickTriggerDelayChange(delaySeconds)
+                                                    quickTriggerDelayExpanded = false
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
                                 Text(
-                                    text = stringResource(R.string.settings_no_quick_trigger_presets),
+                                    text = stringResource(R.string.settings_quick_triggers_audio_note),
                                     style = MaterialTheme.typography.labelLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                            } else {
-                                state.quickTriggerPresets.forEachIndexed { index, preset ->
-                                    Surface(
-                                        color = MaterialTheme.colorScheme.surfaceContainer,
-                                        shape = RoundedCornerShape(22.dp),
-                                        tonalElevation = 1.dp
-                                    ) {
-                                        Column(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(12.dp),
-                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            }
+                        }
+                    }
+                    item {
+                        PreferenceCard(
+                            icon = Icons.Outlined.Settings,
+                            title = stringResource(R.string.settings_open_accessibility_settings),
+                            subtitle = stringResource(R.string.settings_accessibility_note),
+                            onClick = { openAccessibilitySettings(context) }
+                        )
+                    }
+                    item {
+                        PreferenceCard(
+                            icon = Icons.Outlined.Star,
+                            title = stringResource(R.string.label_saved_presets),
+                            subtitle = stringResource(R.string.settings_presets_note),
+                            onClick = null,
+                            trailingContent = null
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                ExpressiveTextField(
+                                    value = state.quickTriggerPresetName,
+                                    onValueChange = viewModel::onQuickTriggerPresetNameChange,
+                                    label = stringResource(R.string.settings_preset_name_label),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                FilledTonalButton(
+                                    onClick = viewModel::saveQuickTriggerPreset,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .bounceClick(enabled = state.quickTriggerPresets.size < QuickTriggerManager.MAX_PRESETS),
+                                    enabled = state.quickTriggerPresets.size < QuickTriggerManager.MAX_PRESETS
+                                ) {
+                                    Text(
+                                        stringResource(
+                                            R.string.settings_save_preset_button,
+                                            state.quickTriggerPresets.size,
+                                            QuickTriggerManager.MAX_PRESETS
+                                        )
+                                    )
+                                }
+                                if (state.quickTriggerPresets.isEmpty()) {
+                                    Text(
+                                        text = stringResource(R.string.settings_no_quick_trigger_presets),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                } else {
+                                    state.quickTriggerPresets.forEachIndexed { index, preset ->
+                                        Surface(
+                                            color = MaterialTheme.colorScheme.surfaceContainer,
+                                            shape = RoundedCornerShape(22.dp),
+                                            tonalElevation = 1.dp
                                         ) {
-                                            Text(
-                                                text = stringResource(R.string.settings_preset_entry_title, index + 1, preset.title),
-                                                style = MaterialTheme.typography.titleSmall,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                            Text(
-                                                text = "${preset.callerName.ifBlank { stringResource(R.string.settings_preset_unknown_caller) }} • ${preset.callerNumber} • ${FakeCallViewModel.formatDelay(preset.delaySeconds)}",
-                                                style = MaterialTheme.typography.labelLarge,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.SpaceBetween,
-                                                verticalAlignment = Alignment.CenterVertically
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(12.dp),
+                                                verticalArrangement = Arrangement.spacedBy(8.dp)
                                             ) {
-                                                TextButton(
-                                                    onClick = { viewModel.applyQuickTriggerPreset(index + 1) },
-                                                    modifier = Modifier.bounceClick()
+                                                Text(
+                                                    text = stringResource(
+                                                        R.string.settings_preset_entry_title,
+                                                        index + 1,
+                                                        preset.title
+                                                    ),
+                                                    style = MaterialTheme.typography.titleSmall,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Text(
+                                                    text = "${preset.callerName.ifBlank { stringResource(R.string.settings_preset_unknown_caller) }} • ${preset.callerNumber} • ${FakeCallViewModel.formatDelay(context, preset.delaySeconds)}",
+                                                    style = MaterialTheme.typography.labelLarge,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
                                                 ) {
-                                                    Text(stringResource(R.string.settings_apply_to_defaults))
-                                                }
-                                                TextButton(
-                                                    onClick = { viewModel.removeQuickTriggerPreset(index + 1) },
-                                                    modifier = Modifier.bounceClick()
-                                                ) {
-                                                    Text(stringResource(R.string.action_remove))
+                                                    TextButton(
+                                                        onClick = { viewModel.applyQuickTriggerPreset(index + 1) },
+                                                        modifier = Modifier.bounceClick()
+                                                    ) {
+                                                        Text(stringResource(R.string.settings_apply_to_defaults))
+                                                    }
+                                                    TextButton(
+                                                        onClick = { viewModel.removeQuickTriggerPreset(index + 1) },
+                                                        modifier = Modifier.bounceClick()
+                                                    ) {
+                                                        Text(stringResource(R.string.action_remove))
+                                                    }
                                                 }
                                             }
                                         }
                                     }
                                 }
                             }
-                            Text(
-                                text = stringResource(R.string.settings_presets_note),
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = stringResource(R.string.settings_automation_action_note),
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
                         }
                     }
-                }
-
-                item {
-                    PreferenceCategoryHeader(stringResource(R.string.settings_category_mailbox))
-                }
-
-                item {
-                    PreferenceCard(
-                        icon = Icons.Outlined.Folder,
-                        title = stringResource(R.string.settings_import_mailbox_title),
-                        subtitle = stringResource(R.string.settings_import_mailbox_subtitle),
-                        onClick = { ivrImportLauncher.launch(arrayOf("text/xml", "application/xml")) }
-                    )
-                }
-
-                item {
-                    PreferenceCard(
-                        icon = Icons.Outlined.Refresh,
-                        title = stringResource(R.string.settings_export_mailbox_title),
-                        subtitle = stringResource(R.string.settings_export_mailbox_subtitle),
-                        onClick = { ivrExportLauncher.launch("fakecall_mailbox.xml") }
-                    )
-                }
-
-                item {
-                    PreferenceCard(
-                        icon = Icons.Outlined.Add,
-                        title = stringResource(R.string.settings_add_node_title),
-                        subtitle = stringResource(R.string.settings_add_node_subtitle),
-                        onClick = { showAddNodeDialog = true }
-                    )
-                }
-
-                if (ivrNodes.isEmpty()) {
                     item {
-                        Text(
-                            text = stringResource(R.string.settings_no_mailbox_nodes),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        PreferenceCard(
+                            icon = Icons.Default.Code,
+                            title = stringResource(R.string.settings_automation_api_title),
+                            subtitle = stringResource(R.string.settings_automation_action_note),
+                            onClick = null,
+                            trailingContent = null
                         )
                     }
-                } else {
-                    items(ivrNodes) { node ->
-                        MailboxNodeCard(
-                            node = node,
-                            nodes = ivrNodes,
-                            isRoot = ivrConfig?.rootId == node.id,
-                            onSetRoot = { viewModel.setIvrRoot(node.id) },
-                            onSelectAudio = {
-                                pendingAudioNodeId = node.id
-                                ivrAudioPicker.launch(arrayOf("audio/*"))
-                            },
-                            onClearAudio = { viewModel.clearIvrNodeAudio(node.id) },
-                            onAddMapping = { mappingNodeId = node.id },
-                            onRemoveMapping = { digit -> viewModel.removeIvrRoute(node.id, digit) },
-                            onDelete = { viewModel.removeIvrNode(node.id) }
+                }
+
+                if (submenu == SettingsSubmenu.MAILBOX) {
+                    item {
+                        PreferenceCategoryHeader(stringResource(R.string.settings_category_mailbox))
+                    }
+                    item {
+                        PreferenceCard(
+                            icon = Icons.Outlined.Folder,
+                            title = stringResource(R.string.settings_import_mailbox_title),
+                            subtitle = stringResource(R.string.settings_import_mailbox_subtitle),
+                            onClick = { ivrImportLauncher.launch(arrayOf("text/xml", "application/xml")) }
                         )
+                    }
+                    item {
+                        PreferenceCard(
+                            icon = Icons.Outlined.Refresh,
+                            title = stringResource(R.string.settings_export_mailbox_title),
+                            subtitle = stringResource(R.string.settings_export_mailbox_subtitle),
+                            onClick = { ivrExportLauncher.launch("fakecall_mailbox.xml") }
+                        )
+                    }
+                    item {
+                        PreferenceCard(
+                            icon = Icons.Outlined.Add,
+                            title = stringResource(R.string.settings_add_node_title),
+                            subtitle = stringResource(R.string.settings_add_node_subtitle),
+                            onClick = { showAddNodeDialog = true }
+                        )
+                    }
+
+                    if (ivrNodes.isEmpty()) {
+                        item {
+                            Text(
+                                text = stringResource(R.string.settings_no_mailbox_nodes),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                        }
+                    } else {
+                        items(ivrNodes) { node ->
+                            MailboxNodeCard(
+                                node = node,
+                                nodes = ivrNodes,
+                                isRoot = ivrConfig?.rootId == node.id,
+                                onSetRoot = { viewModel.setIvrRoot(node.id) },
+                                onSelectAudio = {
+                                    pendingAudioNodeId = node.id
+                                    ivrAudioPicker.launch(arrayOf("audio/*"))
+                                },
+                                onClearAudio = { viewModel.clearIvrNodeAudio(node.id) },
+                                onAddMapping = { mappingNodeId = node.id },
+                                onRemoveMapping = { digit -> viewModel.removeIvrRoute(node.id, digit) },
+                                onDelete = { viewModel.removeIvrNode(node.id) }
+                            )
+                        }
                     }
                 }
 
@@ -555,106 +683,108 @@ fun SettingsScreen(
                     }
                 }
 
-                item {
-                    ElevatedCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(32.dp),
-                        colors = CardDefaults.elevatedCardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                        ),
-                        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                if (submenu == SettingsSubmenu.MAIN) {
+                    item {
+                        ElevatedCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(32.dp),
+                            colors = CardDefaults.elevatedCardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                            ),
+                            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
                         ) {
-                            Text(
-                                text = stringResource(R.string.settings_about_title),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = stringResource(R.string.settings_current_version, BuildConfig.VERSION_NAME),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Surface(
-                                shape = RoundedCornerShape(22.dp),
-                                color = MaterialTheme.colorScheme.surfaceContainer
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .bounceClick(onClick = { openUrl(context, GITHUB_REPO_URL) })
-                                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Code,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = stringResource(R.string.settings_github_repo),
-                                            style = MaterialTheme.typography.titleSmall,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.settings_github_repo_name),
-                                            style = MaterialTheme.typography.labelLarge,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    androidx.compose.material3.Icon(
-                                        imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-
-                            FilledTonalButton(
-                                onClick = {
-                                    if (isCheckingUpdates) return@FilledTonalButton
-                                    coroutineScope.launch {
-                                        isCheckingUpdates = true
-                                        when (val result = viewModel.checkForUpdatesManual()) {
-                                            is UpdateCheckResult.UpdateAvailable -> {
-                                                updateDialogRelease = result.release
-                                            }
-                                            UpdateCheckResult.UpToDate -> {
-                                                snackbarHostState.showSnackbar(context.getString(R.string.snackbar_up_to_date))
-                                            }
-                                            UpdateCheckResult.RateLimited -> {
-                                                snackbarHostState.showSnackbar(context.getString(R.string.snackbar_rate_limited))
-                                            }
-                                            UpdateCheckResult.Unavailable -> {
-                                                snackbarHostState.showSnackbar(context.getString(R.string.snackbar_update_unavailable))
-                                            }
-                                        }
-                                        isCheckingUpdates = false
-                                    }
-                                },
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .bounceClick(enabled = !isCheckingUpdates)
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(14.dp)
                             ) {
-                                if (isCheckingUpdates) {
-                                    CircularProgressIndicator(
+                                Text(
+                                    text = stringResource(R.string.settings_about_title),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = stringResource(R.string.settings_current_version, BuildConfig.VERSION_NAME),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Surface(
+                                    shape = RoundedCornerShape(22.dp),
+                                    color = MaterialTheme.colorScheme.surfaceContainer
+                                ) {
+                                    Row(
                                         modifier = Modifier
-                                            .width(18.dp)
-                                            .height(18.dp),
-                                        strokeWidth = 2.dp,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                                    )
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Text(stringResource(R.string.settings_checking_updates))
-                                } else {
-                                    Text(stringResource(R.string.settings_check_for_updates))
+                                            .fillMaxWidth()
+                                            .bounceClick(onClick = { openUrl(context, GITHUB_REPO_URL) })
+                                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Code,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = stringResource(R.string.settings_github_repo),
+                                                style = MaterialTheme.typography.titleSmall,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Text(
+                                                text = stringResource(R.string.settings_github_repo_name),
+                                                style = MaterialTheme.typography.labelLarge,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        androidx.compose.material3.Icon(
+                                            imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+
+                                FilledTonalButton(
+                                    onClick = {
+                                        if (isCheckingUpdates) return@FilledTonalButton
+                                        coroutineScope.launch {
+                                            isCheckingUpdates = true
+                                            when (val result = viewModel.checkForUpdatesManual()) {
+                                                is UpdateCheckResult.UpdateAvailable -> {
+                                                    updateDialogRelease = result.release
+                                                }
+                                                UpdateCheckResult.UpToDate -> {
+                                                    snackbarHostState.showSnackbar(context.getString(R.string.snackbar_up_to_date))
+                                                }
+                                                UpdateCheckResult.RateLimited -> {
+                                                    snackbarHostState.showSnackbar(context.getString(R.string.snackbar_rate_limited))
+                                                }
+                                                UpdateCheckResult.Unavailable -> {
+                                                    snackbarHostState.showSnackbar(context.getString(R.string.snackbar_update_unavailable))
+                                                }
+                                            }
+                                            isCheckingUpdates = false
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .bounceClick(enabled = !isCheckingUpdates)
+                                ) {
+                                    if (isCheckingUpdates) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier
+                                                .width(18.dp)
+                                                .height(18.dp),
+                                            strokeWidth = 2.dp,
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                                        )
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Text(stringResource(R.string.settings_checking_updates))
+                                    } else {
+                                        Text(stringResource(R.string.settings_check_for_updates))
+                                    }
                                 }
                             }
                         }
@@ -666,6 +796,7 @@ fun SettingsScreen(
                 }
             }
         }
+    }
     }
 
     if (showAddNodeDialog) {
@@ -720,6 +851,12 @@ fun SettingsScreen(
             }
         )
     }
+}
+
+private enum class SettingsSubmenu {
+    MAIN,
+    AUTOMATION,
+    MAILBOX
 }
 
 @Composable
@@ -893,7 +1030,7 @@ private fun MailboxNodeCard(
                         androidx.compose.material3.InputChip(
                             selected = false,
                             onClick = {},
-                            label = { Text("$digit → $title") },
+                            label = { Text(stringResource(R.string.settings_mapping_chip_label, digit.toString(), title)) },
                             trailingIcon = {
                                 androidx.compose.material3.IconButton(
                                     onClick = { onRemoveMapping(digit) },

@@ -218,7 +218,7 @@ private fun UpdateBanner(
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
-                        text = "v",
+                        text = stringResource(R.string.label_version_prefix),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onTertiaryContainer
                     )

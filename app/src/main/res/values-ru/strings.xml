@@ -85,6 +85,9 @@
     <string name="settings_category_automation">Автоматизация</string>
     <string name="settings_automation_title">Автоматизация и значения по умолчанию</string>
     <string name="settings_automation_subtitle">Используются внешними интентами и ярлыком специальных возможностей.</string>
+    <string name="settings_automation_hub_subtitle">Управляйте внешними триггерами, ярлыком специальных возможностей и значениями по умолчанию в одном месте.</string>
+    <string name="settings_automation_defaults_title">Значения Quick Trigger по умолчанию</string>
+    <string name="settings_automation_api_title">Automation API</string>
     <string name="settings_default_caller_name_label">Имя звонящего по умолчанию</string>
     <string name="settings_default_caller_number_label">Номер звонящего по умолчанию</string>
     <string name="settings_default_delay_label">Задержка по умолчанию</string>
@@ -100,6 +103,7 @@
     <string name="settings_presets_note">Пресеты появляются как действия приложения при долгом нажатии на ярлык и как плитки быстрых настроек (Пресет 1–5).</string>
     <string name="settings_automation_action_note">Действие: `com.upnp.fakeCall.TRIGGER` с параметрами `caller_name`, `caller_number` и `delay`.</string>
     <string name="settings_category_mailbox">Почтовый ящик (IVR)</string>
+    <string name="settings_mailbox_hub_subtitle">Управляйте IVR-узлами, маршрутами и импортом/экспортом, не перегружая основные настройки.</string>
     <string name="settings_import_mailbox_title">Импортировать XML почтового ящика</string>
     <string name="settings_import_mailbox_subtitle">Загрузить сохранённое IVR-дерево.</string>
     <string name="settings_export_mailbox_title">Экспортировать XML почтового ящика</string>
@@ -181,6 +185,11 @@
 
     <!-- Quick Trigger Tile -->
     <string name="tile_preset_label">Пресет %d</string>
+    <string name="tile_service_preset_1">Пресет FakeCall 1</string>
+    <string name="tile_service_preset_2">Пресет FakeCall 2</string>
+    <string name="tile_service_preset_3">Пресет FakeCall 3</string>
+    <string name="tile_service_preset_4">Пресет FakeCall 4</string>
+    <string name="tile_service_preset_5">Пресет FakeCall 5</string>
     <string name="tile_not_configured">Не настроен</string>
     <string name="toast_triggering_now">Фейковый звонок запускается\u2026</string>
     <string name="toast_scheduled_in">Фейковый звонок запланирован через %d сек.</string>
@@ -195,6 +204,9 @@
 
     <!-- Misc labels -->
     <string name="label_unknown">Неизвестно</string>
+    <string name="label_version_prefix">v</string>
+    <string name="delay_now">Сейчас</string>
+    <string name="settings_mapping_chip_label">%1$s → %2$s</string>
 
     <!-- Status messages -->
     <string name="status_grant_permissions">Предоставьте разрешения на звонки, чтобы продолжить.</string>

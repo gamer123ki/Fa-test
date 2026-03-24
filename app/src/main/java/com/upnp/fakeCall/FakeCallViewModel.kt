@@ -3,6 +3,7 @@ package com.upnp.fakeCall
 import android.app.Application
 import android.os.Build
 import com.upnp.fakeCall.R
+import android.content.Context
 import android.content.Intent
 import android.media.MediaMetadataRetriever
 import android.net.Uri
@@ -25,6 +26,8 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.util.Locale
 import java.util.UUID
 
 enum class ScheduleKind {
@@ -43,7 +46,7 @@ data class CustomPreset(
 
 data class FakeCallUiState(
     val isOnboardingComplete: Boolean = false,
-    val providerName: String = "Fake Call Provider",
+    val providerName: String = "",
     val callerName: String = "",
     val callerNumber: String = "",
     val selectedDelaySeconds: Int = 10,
@@ -55,14 +58,14 @@ data class FakeCallUiState(
     val customPresets: List<CustomPreset> = emptyList(),
     val ivrConfig: IvrConfig? = null,
     val selectedAudioUri: String = "",
-    val selectedAudioName: String = "Default",
+    val selectedAudioName: String = "",
     val hasRequiredPermissions: Boolean = false,
     val isProviderEnabled: Boolean = false,
     val isTimerRunning: Boolean = false,
     val timerEndsAtMillis: Long = 0L,
     val statusMessage: String = "",
     val isRecordingEnabled: Boolean = true,
-    val recordingsFolderName: String = "Downloads/FakeCall",
+    val recordingsFolderName: String = "",
     val quickTriggerCallerName: String = "",
     val quickTriggerCallerNumber: String = "",
     val quickTriggerDelaySeconds: Int = QuickTriggerManager.DEFAULT_DELAY_SECONDS,
@@ -831,10 +834,16 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
                 val time = Instant.ofEpochMilli(triggerAtMillis)
                     .atZone(ZoneId.systemDefault())
                     .toLocalTime()
-                val formatter = DateTimeFormatter.ofPattern("HH:mm")
+                val locale = getApplication<Application>().resources.configuration.locales[0]
+                    ?: Locale.getDefault()
+                val formatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+                    .withLocale(locale)
                 str(R.string.status_call_scheduled_for, time.format(formatter))
             }
-            else -> str(R.string.status_timer_started_for, formatDelay(delaySeconds))
+            else -> str(
+                R.string.status_timer_started_for,
+                DelayFormatter.formatLong(getApplication(), delaySeconds)
+            )
         }
     }
 
@@ -936,13 +945,8 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
         private const val KEY_ONBOARDING_COMPLETE = "onboarding_complete"
         private const val KEY_QUICK_TRIGGER_PRESET_NAME = "quick_trigger_preset_name"
 
-        fun formatDelay(seconds: Int): String {
-            return when {
-                seconds <= 0 -> "Now"
-                seconds < 60 -> "$seconds seconds"
-                seconds % 60 == 0 -> "${seconds / 60} minute${if (seconds >= 120) "s" else ""}"
-                else -> "${seconds / 60}m ${seconds % 60}s"
-            }
+        fun formatDelay(context: Context, seconds: Int): String {
+            return DelayFormatter.formatLong(context, seconds)
         }
     }
 }

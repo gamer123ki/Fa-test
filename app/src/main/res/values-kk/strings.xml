@@ -85,6 +85,9 @@
     <string name="settings_category_automation">Автоматтандыру</string>
     <string name="settings_automation_title">Автоматтандыру және жылдам іске қосу әдепкілері</string>
     <string name="settings_automation_subtitle">Сыртқы интенттер және арнайы мүмкіндіктер таңбашасы пайдаланады.</string>
+    <string name="settings_automation_hub_subtitle">Сыртқы триггерлерді, арнайы мүмкіндіктер таңбашасын және әдепкі мәндерді бір жерден басқарыңыз.</string>
+    <string name="settings_automation_defaults_title">Quick Trigger әдепкілері</string>
+    <string name="settings_automation_api_title">Automation API</string>
     <string name="settings_default_caller_name_label">Әдепкі қоңырау шалушы атауы</string>
     <string name="settings_default_caller_number_label">Әдепкі қоңырау шалушы нөмірі</string>
     <string name="settings_default_delay_label">Әдепкі кешігу</string>
@@ -100,6 +103,7 @@
     <string name="settings_presets_note">Алдын ала орнатулар іске қосқышты ұзақ басқанда қолданба әрекеттері және жылдам параметрлер тақтасы (1-5 алдын ала орнату) ретінде пайда болады.</string>
     <string name="settings_automation_action_note">Әрекет: `com.upnp.fakeCall.TRIGGER` және `caller_name`, `caller_number`, `delay` қосымшалары.</string>
     <string name="settings_category_mailbox">Пошта жәшігі (IVR)</string>
+    <string name="settings_mailbox_hub_subtitle">Негізгі баптауларды толтырмай, IVR түйіндерін, бағыттауларын және импорт/экспортты басқарыңыз.</string>
     <string name="settings_import_mailbox_title">Пошта жәшігі XML-ін импорттау</string>
     <string name="settings_import_mailbox_subtitle">Сақталған IVR ағашын жүктеу.</string>
     <string name="settings_export_mailbox_title">Пошта жәшігі XML-ін экспорттау</string>
@@ -181,6 +185,11 @@
 
     <!-- Quick Trigger Tile -->
     <string name="tile_preset_label">Алдын ала орнату %d</string>
+    <string name="tile_service_preset_1">FakeCall алдын ала орнатуы 1</string>
+    <string name="tile_service_preset_2">FakeCall алдын ала орнатуы 2</string>
+    <string name="tile_service_preset_3">FakeCall алдын ала орнатуы 3</string>
+    <string name="tile_service_preset_4">FakeCall алдын ала орнатуы 4</string>
+    <string name="tile_service_preset_5">FakeCall алдын ала орнатуы 5</string>
     <string name="tile_not_configured">Конфигурацияланбаған</string>
     <string name="toast_triggering_now">Жалған қоңырау қазір іске қосылуда\u2026</string>
     <string name="toast_scheduled_in">Жалған қоңырау %d секундтан кейін жоспарланды</string>
@@ -195,6 +204,9 @@
 
     <!-- Misc labels -->
     <string name="label_unknown">Белгісіз</string>
+    <string name="label_version_prefix">v</string>
+    <string name="delay_now">Қазір</string>
+    <string name="settings_mapping_chip_label">%1$s → %2$s</string>
 
     <!-- Status messages -->
     <string name="status_grant_permissions">Жалғастыру үшін телефон рұқсаттарын беріңіз.</string>

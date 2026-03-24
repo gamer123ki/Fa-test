@@ -73,6 +73,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.upnp.fakeCall.CustomPreset
 import com.upnp.fakeCall.FakeCallUiState
 import com.upnp.fakeCall.FakeCallViewModel
+import com.upnp.fakeCall.R
 import com.upnp.fakeCall.ScheduleKind
 import com.upnp.fakeCall.ui.components.AnimatedIcon
 import com.upnp.fakeCall.ui.components.AudioPreviewCard
@@ -87,6 +88,8 @@ import kotlinx.coroutines.flow.collect
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.util.Locale
 import kotlin.math.absoluteValue
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -232,7 +235,7 @@ fun DashboardScreen(
                     item {
                         ScheduleStateCard(
                             isTimerRunning = state.isTimerRunning,
-                            scheduleLabel = scheduleDisplay(state, is24Hour),
+                            scheduleLabel = scheduleDisplay(context, state, is24Hour),
                             scheduleSubtitle = scheduleSubtitle(state),
                             runningLabel = runningScheduleLabel(state.timerEndsAtMillis)
                         )
@@ -262,7 +265,7 @@ fun DashboardScreen(
                     item {
                         val manualLabel = when (state.scheduleKind) {
                             ScheduleKind.PRESET -> stringResource(R.string.schedule_kind_set_custom_time)
-                            else -> scheduleDisplay(state, is24Hour)
+                            else -> scheduleDisplay(context, state, is24Hour)
                         }
                         val manualHelper = when (state.scheduleKind) {
                             ScheduleKind.CUSTOM_EXACT -> stringResource(R.string.schedule_kind_exact_time)
@@ -270,7 +273,7 @@ fun DashboardScreen(
                             ScheduleKind.PRESET -> stringResource(R.string.schedule_kind_manual_override)
                         }
                         TimingSelectionCard(
-                            scheduleTitle = scheduleDisplay(state, is24Hour),
+                            scheduleTitle = scheduleDisplay(context, state, is24Hour),
                             scheduleSubtitle = scheduleSubtitle(state),
                             selectedDelaySeconds = if (state.scheduleKind == ScheduleKind.PRESET) {
                                 state.selectedDelaySeconds
@@ -302,7 +305,7 @@ fun DashboardScreen(
                                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 viewModel.removeCustomPreset(it)
                             },
-                            formatPreset = { formatCustomPreset(it, is24Hour) }
+                            formatPreset = { formatCustomPreset(context, it, is24Hour) }
                         )
                     }
 
@@ -983,13 +986,14 @@ private fun rememberPickerState(initialIndex: Int): PickerState {
     }
 }
 
-private fun scheduleDisplay(state: FakeCallUiState, is24Hour: Boolean): String {
+private fun scheduleDisplay(context: android.content.Context, state: FakeCallUiState, is24Hour: Boolean): String {
     return when (state.scheduleKind) {
         ScheduleKind.CUSTOM_EXACT -> formatExactTime(state.customExactHour, state.customExactMinute, is24Hour)
         ScheduleKind.CUSTOM_COUNTDOWN -> FakeCallViewModel.formatDelay(
+            context,
             state.customCountdownMinutes * 60 + state.customCountdownSeconds
         )
-        ScheduleKind.PRESET -> FakeCallViewModel.formatDelay(state.selectedDelaySeconds)
+        ScheduleKind.PRESET -> FakeCallViewModel.formatDelay(context, state.selectedDelaySeconds)
     }
 }
 
@@ -1003,10 +1007,13 @@ private fun scheduleSubtitle(state: FakeCallUiState): String {
 }
 
 private fun formatExactTime(hour: Int, minute: Int, is24Hour: Boolean): String {
+    val locale = Locale.getDefault()
     val formatter = if (is24Hour) {
-        DateTimeFormatter.ofPattern("HH:mm")
+        val pattern = DateFormat.getBestDateTimePattern(locale, "Hm")
+        DateTimeFormatter.ofPattern(pattern, locale)
     } else {
-        DateTimeFormatter.ofPattern("h:mm a")
+        val pattern = DateFormat.getBestDateTimePattern(locale, "hm")
+        DateTimeFormatter.ofPattern(pattern, locale)
     }
     val time = java.time.LocalTime.of(hour, minute)
     return time.format(formatter)
@@ -1016,13 +1023,19 @@ private fun runningScheduleLabel(triggerAtMillis: Long): String {
     if (triggerAtMillis <= 0L) return ""
     val time = Instant.ofEpochMilli(triggerAtMillis)
         .atZone(ZoneId.systemDefault())
-    val formatter = DateTimeFormatter.ofPattern("EEE, MMM d • HH:mm")
+    val formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
+        .withLocale(Locale.getDefault())
     return time.format(formatter)
 }
 
-private fun formatCustomPreset(preset: CustomPreset, is24Hour: Boolean): String {
+private fun formatCustomPreset(
+    context: android.content.Context,
+    preset: CustomPreset,
+    is24Hour: Boolean
+): String {
     return when (preset.kind) {
         ScheduleKind.CUSTOM_COUNTDOWN -> FakeCallViewModel.formatDelay(
+            context,
             preset.minutes * 60 + preset.seconds
         )
         ScheduleKind.CUSTOM_EXACT -> formatExactTime(preset.hour, preset.minute, is24Hour)
