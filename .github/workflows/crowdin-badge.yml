@@ -8,15 +8,15 @@ workflow_dispatch:
 jobs:
 update-badge:
 runs-on: ubuntu-latest
+
+
 steps:
   - name: Repo auschecken
     uses: actions/checkout@v3
 
   - name: Crowdin Fortschritt holen
     run: |
-      curl -s -H "Authorization: Bearer ${{ secrets.CROWDIN_API_TOKEN }}" \
-      https://api.crowdin.com/api/v2/projects/fakecall/languages/progress \
-      > progress.json
+      curl -s -H "Authorization: Bearer ${{ secrets.CROWDIN_API_TOKEN }}" https://api.crowdin.com/api/v2/projects/fakecall/languages/progress > progress.json
 
   - name: Prozent berechnen + Badge erstellen
     run: |
@@ -47,3 +47,4 @@ steps:
       git add badge.json
       git commit -m "Update badge" || echo "No changes"
       git push
+
