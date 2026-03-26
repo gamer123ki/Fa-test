@@ -7,10 +7,9 @@
 <p>
 
 [![GitHub stars](https://img.shields.io/github/stars/DDOneApps/FakeCall?style=for-the-badge)](https://github.com/DDOneApps/FakeCall/stargazers) [![GitHub forks](https://img.shields.io/github/forks/DDOneApps/FakeCall?style=for-the-badge)](https://github.com/DDOneApps/FakeCall/network) [![GitHub issues](https://img.shields.io/github/issues/DDOneApps/FakeCall?style=for-the-badge)](https://github.com/DDOneApps/FakeCall/issues)
-[![Downloads](https://img.shields.io/github/downloads/DDOneApps/FakeCall/total?color=green&style=for-the-badge)](https://github.com/DDOneApps/FakeCall/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/DDOneApps/FakeCall/total?color=green&style=for-the-badge)](https://github.com/DDOneApps/FakeCall/releases/latest) [!![de translation](https://img.shields.io/badge/dynamic/json?color=blue&label=localization&style=for-the-badge&logo=crowdin&query=%24.progress.total.data.translationProgress&url=https%3A%2F%2Fbadges.awesome-crowdin.com%2Fstats-17635152-883718.json)
 
-[![GitHub license](https://img.shields.io/badge/license-GPL%20v3-red?style=for-the-badge)](LICENSE) <!-- TODO: Add a LICENSE file and update badge -->
-
+[![GitHub license](https://img.shields.io/badge/license-GPL%20v3-red?style=for-the-badge)](LICENSE)
 </p>
 
 **An open-source Android application to simulate incoming calls, featuring a modern Material 3 UI with dynamic Monet support.**
@@ -155,7 +154,7 @@ FakeCall/
 
 We welcome contributions to FakeCall!
 
-
+If you want to help translating, do it [Here](https://crowdin.com/project/fakecall/invite?h=ad1b7ff358ecf52e9f823b4f7f691f1d2725120) via crowdin
 ## License
 
 This Project is licenced under GNU General Public License.
