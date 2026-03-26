@@ -7,7 +7,8 @@
 <p>
 
 [![GitHub stars](https://img.shields.io/github/stars/DDOneApps/FakeCall?style=for-the-badge)](https://github.com/DDOneApps/FakeCall/stargazers) [![GitHub forks](https://img.shields.io/github/forks/DDOneApps/FakeCall?style=for-the-badge)](https://github.com/DDOneApps/FakeCall/network) [![GitHub issues](https://img.shields.io/github/issues/DDOneApps/FakeCall?style=for-the-badge)](https://github.com/DDOneApps/FakeCall/issues)
-[![Downloads](https://img.shields.io/github/downloads/DDOneApps/FakeCall/total?color=green&style=for-the-badge)](https://github.com/DDOneApps/FakeCall/releases/latest) ![Translation](https://img.shields.io/endpoint?url=[https://raw.githubusercontent.com/DDOneApps/FakeCall/main/badge.json](https://raw.githubusercontent.com/DDOneApps/FakeCall/refs/heads/main/badge.json)&style=for-the-badge)
+[![Downloads](https://img.shields.io/github/downloads/DDOneApps/FakeCall/total?color=green&style=for-the-badge)](https://github.com/DDOneApps/FakeCall/releases/latest) 
+![Crowdin](https://img.shields.io/badge/dynamic/json?color=red&label=translation&query=$.message&style=for-the-badge&url=https://raw.githubusercontent.com/DDOneApps/FakeCall/main/badge.json&logo=crowdin)
 
 [![GitHub license](https://img.shields.io/badge/license-GPL%20v3-red?style=for-the-badge)](LICENSE)
 </p>
