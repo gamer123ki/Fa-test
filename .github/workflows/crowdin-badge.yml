@@ -10,6 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      
+      - name: Repo auschecken
+        uses: actions/checkout@v3
+        with:
+              token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Crowdin Fortschritt holen
         run: |
