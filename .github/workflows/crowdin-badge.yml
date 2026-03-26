@@ -1,0 +1,52 @@
+name: Update Crowdin Badge
+
+on:
+schedule:
+- cron: "0 * * * *" # jede Stunde
+workflow_dispatch:
+
+jobs:
+update-badge:
+runs-on: ubuntu-latest
+
+```
+steps:
+  - name: Repo auschecken
+    uses: actions/checkout@v3
+
+  - name: Crowdin Fortschritt holen
+    run: |
+      curl -s -H "Authorization: Bearer ${{ secrets.CROWDIN_API_TOKEN }}" \
+      https://api.crowdin.com/api/v2/projects/fakecall/languages/progress \
+      > progress.json
+
+  - name: Prozent berechnen + Badge erstellen
+    run: |
+      percent=$(jq '[.data[].data.translationProgress] | add / length' progress.json)
+      percent_rounded=$(printf "%.0f" $percent)
+
+      if [ "$percent_rounded" -lt 50 ]; then
+        color="red"
+      elif [ "$percent_rounded" -lt 80 ]; then
+        color="yellow"
+      else
+        color="brightgreen"
+      fi
+
+      cat <<EOF > badge.json
+      {
+        "schemaVersion": 1,
+        "label": "translation",
+        "message": "${percent_rounded}%",
+        "color": "$color"
+      }
+      EOF
+
+  - name: Commit & Push
+    run: |
+      git config user.name "github-actions"
+      git config user.email "actions@github.com"
+      git add badge.json
+      git commit -m "Update badge" || echo "No changes"
+      git push
+```
