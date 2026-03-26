@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Fake Call</string>
+    <string name="app_name">FakeCall</string>
     <!-- Onboarding -->
     <string name="onboarding_title">Willkommen bei FakeCall</string>
     <string name="onboarding_subtitle">Ein hochwertiges Fake-Call-Erlebnis mit ausdrucksstarken Animationen und sofortiger Planung.</string>
@@ -101,7 +101,7 @@
     <string name="settings_category_mailbox">Mailbox (IVR)</string>
     <string name="settings_mailbox_hub_subtitle">Verwalte IVR-Knoten, Zuordnungen und Import/Export, ohne die Haupteinstellungen zu überladen.</string>
     <string name="settings_import_mailbox_title">Mailbox-XML importieren</string>
-    <string name="settings_import_mailbox_subtitle">Einen gespeicherten IVR-Baum laden.</string>
+    <string name="settings_import_mailbox_subtitle">Ein gespeichertes IVR-Backup laden.</string>
     <string name="settings_export_mailbox_title">Mailbox-XML exportieren</string>
     <string name="settings_export_mailbox_subtitle">Deinen aktuellen IVR-Baum teilen.</string>
     <string name="settings_add_node_title">Menüknoten hinzufügen</string>
