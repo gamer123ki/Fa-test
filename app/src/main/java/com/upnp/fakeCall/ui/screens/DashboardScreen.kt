@@ -1,6 +1,12 @@
 package com.upnp.fakeCall.ui.screens
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.provider.ContactsContract
 import android.text.format.DateFormat
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -69,8 +75,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.window.Dialog
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.upnp.fakeCall.CustomPreset
+import com.upnp.fakeCall.CallerInputMode
 import com.upnp.fakeCall.FakeCallUiState
 import com.upnp.fakeCall.FakeCallViewModel
 import com.upnp.fakeCall.R
@@ -126,6 +134,19 @@ fun DashboardScreen(
     )
 
     val canTrigger = state.hasRequiredPermissions && state.isProviderEnabled
+    val contactPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        viewModel.onContactPicked(result.data?.data)
+    }
+    val contactPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            val intent = Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI)
+            contactPickerLauncher.launch(intent)
+        }
+    }
     val actionLabel = if (state.isTimerRunning) stringResource(R.string.action_cancel_call) else stringResource(R.string.action_schedule_call)
     val is24Hour = DateFormat.is24HourFormat(context)
 
@@ -242,23 +263,30 @@ fun DashboardScreen(
                     }
 
                     item {
-                        AnimatedVisibility(
-                            visible = state.isTimerRunning,
-                            enter = expandVertically(animationSpec = expressiveSpring()) + fadeIn(animationSpec = expressiveSpring()),
-                            exit = shrinkVertically(animationSpec = expressiveSpring()) + fadeOut(animationSpec = expressiveSpring())
-                        ) {
-                            ScheduledBanner(
-                                runningLabel = runningScheduleLabel(state.timerEndsAtMillis)
-                            )
-                        }
-                    }
-
-                    item {
                         CallerInputCard(
+                            callerInputMode = state.callerInputMode,
+                            onCallerInputModeChange = viewModel::onCallerInputModeChange,
                             callerName = state.callerName,
                             callerNumber = state.callerNumber,
                             onCallerNameChange = viewModel::onCallerNameChange,
-                            onCallerNumberChange = viewModel::onCallerNumberChange
+                            onCallerNumberChange = viewModel::onCallerNumberChange,
+                            selectedContact = state.selectedContact,
+                            pinnedContacts = state.pinnedContacts,
+                            recentContacts = state.recentContacts,
+                            onPickContact = {
+                                val hasContactsPermission = ContextCompat.checkSelfPermission(
+                                    context,
+                                    Manifest.permission.READ_CONTACTS
+                                ) == PackageManager.PERMISSION_GRANTED
+                                if (hasContactsPermission) {
+                                    val intent = Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI)
+                                    contactPickerLauncher.launch(intent)
+                                } else {
+                                    contactPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+                                }
+                            },
+                            onSelectContact = viewModel::selectContact,
+                            onTogglePinned = viewModel::togglePinnedContact
                         )
                     }
 
@@ -480,44 +508,6 @@ private fun ScheduleStateCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ScheduledBanner(runningLabel: String) {
-    Surface(
-        tonalElevation = 1.dp,
-        shape = RoundedCornerShape(32.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            AnimatedIcon(
-                imageVector = Icons.Rounded.Phone,
-                contentDescription = null,
-                shape = CircleShape,
-                backgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
-                tint = MaterialTheme.colorScheme.primary,
-                isRinging = true,
-                isActive = true
-            )
-            Column {
-                Text(
-                    text = stringResource(R.string.schedule_state_running),
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Text(
-                    text = runningLabel,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         }
     }

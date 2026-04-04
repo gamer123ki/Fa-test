@@ -1,15 +1,20 @@
 package com.upnp.fakeCall
 
 import android.app.Application
+import android.content.ContentUris
 import android.os.Build
 import com.upnp.fakeCall.R
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.provider.ContactsContract
 import android.provider.DocumentsContract
 import android.provider.Settings
 import android.telecom.TelecomManager
+import android.util.Base64
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.upnp.fakeCall.ivr.IvrConfig
@@ -27,14 +32,30 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.io.ByteArrayOutputStream
 import java.util.Locale
 import java.util.UUID
+import org.json.JSONArray
+import org.json.JSONObject
 
 enum class ScheduleKind {
     PRESET,
     CUSTOM_COUNTDOWN,
     CUSTOM_EXACT
 }
+
+enum class CallerInputMode {
+    MANUAL,
+    CONTACT
+}
+
+data class CallContact(
+    val id: Long,
+    val displayName: String,
+    val phoneNumber: String,
+    val photoUri: String = "",
+    val avatarBase64: String = ""
+)
 
 data class CustomPreset(
     val kind: ScheduleKind,
@@ -49,6 +70,10 @@ data class FakeCallUiState(
     val providerName: String = "",
     val callerName: String = "",
     val callerNumber: String = "",
+    val callerInputMode: CallerInputMode = CallerInputMode.MANUAL,
+    val selectedContact: CallContact? = null,
+    val pinnedContacts: List<CallContact> = emptyList(),
+    val recentContacts: List<CallContact> = emptyList(),
     val selectedDelaySeconds: Int = 10,
     val scheduleKind: ScheduleKind = ScheduleKind.PRESET,
     val customCountdownMinutes: Int = 2,
@@ -88,6 +113,11 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
     private val updateChecker = UpdateChecker()
     private val quickTriggerDefaults = QuickTriggerManager.loadDefaults(application)
     private val quickTriggerPresets = QuickTriggerManager.loadPresets(application)
+    private val initialPinnedContacts = parseContactList(prefs.getString(KEY_PINNED_CONTACTS, "").orEmpty())
+    private val initialRecentContacts = pruneRecentContacts(
+        recentContacts = parseContactList(prefs.getString(KEY_RECENT_CONTACTS, "").orEmpty()),
+        pinnedContacts = initialPinnedContacts
+    )
 
     private val _uiState = MutableStateFlow(
         FakeCallUiState(
@@ -95,6 +125,14 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
             providerName = prefs.getString(KEY_PROVIDER_NAME, application.getString(R.string.default_provider_name)).orEmpty(),
             callerName = prefs.getString(KEY_CALLER_NAME, "").orEmpty(),
             callerNumber = prefs.getString(KEY_CALLER_NUMBER, "").orEmpty(),
+            callerInputMode = runCatching {
+                CallerInputMode.valueOf(
+                    prefs.getString(KEY_CALLER_INPUT_MODE, CallerInputMode.MANUAL.name).orEmpty()
+                )
+            }.getOrDefault(CallerInputMode.MANUAL),
+            selectedContact = parseContact(prefs.getString(KEY_SELECTED_CONTACT, "").orEmpty()),
+            pinnedContacts = initialPinnedContacts,
+            recentContacts = initialRecentContacts,
             selectedDelaySeconds = prefs.getInt(KEY_DELAY_SECONDS, 10),
             scheduleKind = runCatching {
                 ScheduleKind.valueOf(
@@ -242,6 +280,106 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
 
     fun onCallerNumberChange(value: String) {
         _uiState.update { it.copy(callerNumber = value) }
+    }
+
+    fun onCallerInputModeChange(mode: CallerInputMode) {
+        prefs.edit().putString(KEY_CALLER_INPUT_MODE, mode.name).apply()
+        _uiState.update {
+            it.copy(
+                callerInputMode = mode,
+                statusMessage = if (mode == CallerInputMode.CONTACT && it.selectedContact == null) {
+                    str(R.string.status_select_contact_scheduling)
+                } else {
+                    it.statusMessage
+                }
+            )
+        }
+    }
+
+    fun onContactPicked(uri: Uri?) {
+        if (uri == null) return
+        val contact = resolveContactFromUri(uri) ?: run {
+            _uiState.update { it.copy(statusMessage = str(R.string.status_contact_pick_failed)) }
+            return
+        }
+        selectContact(contact)
+    }
+
+    fun selectContact(contact: CallContact) {
+        val state = uiState.value
+        val updatedPinned = state.pinnedContacts.map {
+            if (sameContact(it, contact)) contact else it
+        }
+        val updatedRecentBase = buildList {
+            var replaced = false
+            state.recentContacts.forEach { existing ->
+                if (sameContact(existing, contact)) {
+                    add(contact)
+                    replaced = true
+                } else {
+                    add(existing)
+                }
+            }
+            if (!replaced) {
+                add(contact)
+            }
+        }.takeLast(MAX_RECENT_CONTACTS)
+        val updatedRecent = pruneRecentContacts(
+            recentContacts = updatedRecentBase,
+            pinnedContacts = updatedPinned
+        )
+
+        persistContactState(
+            selectedContact = contact,
+            pinned = updatedPinned,
+            recent = updatedRecent
+        )
+        _uiState.update {
+            it.copy(
+                callerInputMode = CallerInputMode.CONTACT,
+                selectedContact = contact,
+                pinnedContacts = updatedPinned,
+                recentContacts = updatedRecent,
+                callerName = contact.displayName,
+                callerNumber = contact.phoneNumber
+            )
+        }
+    }
+
+    fun togglePinnedContact(contact: CallContact) {
+        val state = uiState.value
+        val isPinned = state.pinnedContacts.any { sameContact(it, contact) }
+        val updatedPinned = if (isPinned) {
+            state.pinnedContacts.filterNot { sameContact(it, contact) }
+        } else {
+            buildList {
+                add(contact)
+                addAll(state.pinnedContacts.filterNot { sameContact(it, contact) })
+            }.take(MAX_PINNED_CONTACTS)
+        }
+        val updatedRecent = if (isPinned) {
+            pruneRecentContacts(
+                recentContacts = state.recentContacts,
+                pinnedContacts = updatedPinned
+            )
+        } else {
+            val pinnedIndexInRecent = state.recentContacts.indexOfLast { sameContact(it, contact) }
+            val trimmedRecent = if (pinnedIndexInRecent >= 0) {
+                state.recentContacts.drop(pinnedIndexInRecent + 1)
+            } else {
+                state.recentContacts
+            }
+            pruneRecentContacts(
+                recentContacts = trimmedRecent,
+                pinnedContacts = updatedPinned
+            )
+        }
+        persistContactState(
+            selectedContact = state.selectedContact,
+            pinned = updatedPinned,
+            recent = updatedRecent
+        )
+        _uiState.update { it.copy(pinnedContacts = updatedPinned, recentContacts = updatedRecent) }
     }
 
     fun onDelaySelected(delaySeconds: Int) {
@@ -686,14 +824,23 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
             return
         }
 
-        val number = state.callerNumber.trim()
+        val (resolvedName, resolvedNumber) = resolveCaller(state)
+        val number = resolvedNumber.trim()
         if (number.isBlank()) {
-            _uiState.update { it.copy(statusMessage = str(R.string.status_enter_caller_number_scheduling)) }
+            _uiState.update {
+                it.copy(
+                    statusMessage = if (state.callerInputMode == CallerInputMode.CONTACT) {
+                        str(R.string.status_select_contact_scheduling)
+                    } else {
+                        str(R.string.status_enter_caller_number_scheduling)
+                    }
+                )
+            }
             return
         }
 
         prefs.edit()
-            .putString(KEY_CALLER_NAME, state.callerName)
+            .putString(KEY_CALLER_NAME, resolvedName)
             .putString(KEY_CALLER_NUMBER, number)
             .apply()
 
@@ -716,7 +863,7 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
             val telecomHelper = TelecomHelper(getApplication())
             telecomHelper.registerOrUpdatePhoneAccount(state.providerName)
             val triggered = if (telecomHelper.isAccountEnabled()) {
-                telecomHelper.triggerIncomingCall(state.callerName, number)
+                telecomHelper.triggerIncomingCall(resolvedName, number)
             } else {
                 false
             }
@@ -742,7 +889,7 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
         val scheduled = FakeCallAlarmScheduler.scheduleExact(
             context = getApplication(),
             triggerAtMillis = triggerAtMillis,
-            callerName = state.callerName,
+            callerName = resolvedName,
             callerNumber = number,
             providerName = state.providerName
         )
@@ -870,6 +1017,19 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
         return minutes * 60 + seconds
     }
 
+    private fun resolveCaller(state: FakeCallUiState): Pair<String, String> {
+        return if (state.callerInputMode == CallerInputMode.CONTACT) {
+            val contact = state.selectedContact
+            if (contact != null) {
+                contact.displayName to contact.phoneNumber
+            } else {
+                "" to ""
+            }
+        } else {
+            state.callerName to state.callerNumber
+        }
+    }
+
     private fun computeNextExactTriggerMillis(hour: Int, minute: Int): Long {
         val now = ZonedDateTime.now()
         var target = now.withHour(hour).withMinute(minute).withSecond(0).withNano(0)
@@ -978,11 +1138,259 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    private fun resolveContactFromUri(uri: Uri): CallContact? {
+        val resolver = getApplication<Application>().contentResolver
+        val phoneProjection = arrayOf(
+            ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
+            ContactsContract.CommonDataKinds.Phone.LOOKUP_KEY,
+            ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+            ContactsContract.CommonDataKinds.Phone.NUMBER,
+            ContactsContract.CommonDataKinds.Phone.PHOTO_THUMBNAIL_URI,
+            ContactsContract.CommonDataKinds.Phone.PHOTO_URI
+        )
+
+        runCatching {
+            resolver.query(uri, phoneProjection, null, null, null)?.use { cursor ->
+                if (!cursor.moveToFirst()) return@use null
+                val idIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.CONTACT_ID)
+                val lookupIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.LOOKUP_KEY)
+                val nameIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                val numberIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                val thumbIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.PHOTO_THUMBNAIL_URI)
+                val photoIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.PHOTO_URI)
+
+                val contactId = if (idIndex >= 0) cursor.getLong(idIndex) else 0L
+                val lookupKey = if (lookupIndex >= 0) cursor.getString(lookupIndex).orEmpty() else ""
+                val number = if (numberIndex >= 0) cursor.getString(numberIndex).orEmpty().trim() else ""
+                if (number.isBlank()) return@use null
+                val name = if (nameIndex >= 0) cursor.getString(nameIndex).orEmpty() else ""
+                val thumbnailUri = if (thumbIndex >= 0) cursor.getString(thumbIndex).orEmpty() else ""
+                val photoUri = if (photoIndex >= 0) cursor.getString(photoIndex).orEmpty() else ""
+                val resolvedPhotoUri = thumbnailUri.ifBlank { photoUri }
+                val avatarBase64 = encodeContactAvatarBase64(
+                    contactId = contactId,
+                    lookupKey = lookupKey,
+                    photoUri = resolvedPhotoUri
+                )
+
+                return CallContact(
+                    id = contactId,
+                    displayName = name.ifBlank { number },
+                    phoneNumber = number,
+                    photoUri = resolvedPhotoUri,
+                    avatarBase64 = avatarBase64
+                )
+            }
+        }
+
+        val contactProjection = arrayOf(
+            ContactsContract.Contacts._ID,
+            ContactsContract.Contacts.DISPLAY_NAME,
+            ContactsContract.Contacts.PHOTO_URI
+        )
+        var id = 0L
+        var name = ""
+        var photoUri = ""
+        runCatching {
+            resolver.query(uri, contactProjection, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val idIndex = cursor.getColumnIndex(ContactsContract.Contacts._ID)
+                    val nameIndex = cursor.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME)
+                    val photoIndex = cursor.getColumnIndex(ContactsContract.Contacts.PHOTO_URI)
+                    if (idIndex >= 0) id = cursor.getLong(idIndex)
+                    if (nameIndex >= 0) name = cursor.getString(nameIndex).orEmpty()
+                    if (photoIndex >= 0) photoUri = cursor.getString(photoIndex).orEmpty()
+                }
+            }
+        }
+        if (id <= 0L) return null
+        val number = resolvePrimaryNumberForContact(id).trim()
+        if (number.isBlank()) return null
+        return CallContact(
+            id = id,
+            displayName = name.ifBlank { number },
+            phoneNumber = number,
+            photoUri = photoUri,
+            avatarBase64 = encodeContactAvatarBase64(contactId = id, lookupKey = "", photoUri = photoUri)
+        )
+    }
+
+    private fun encodeContactAvatarBase64(
+        contactId: Long,
+        lookupKey: String,
+        photoUri: String
+    ): String {
+        val resolver = getApplication<Application>().contentResolver
+
+        fun decodeFromUri(uriString: String): Bitmap? {
+            if (uriString.isBlank()) return null
+            return runCatching {
+                resolver.openInputStream(Uri.parse(uriString))?.use(BitmapFactory::decodeStream)
+            }.getOrNull()
+        }
+
+        val directPhoto = decodeFromUri(photoUri)
+        val lookupPhoto = if (directPhoto == null && contactId > 0L) {
+            val lookupUri = if (lookupKey.isNotBlank()) {
+                ContactsContract.Contacts.getLookupUri(contactId, lookupKey)
+            } else {
+                ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId)
+            }
+            runCatching {
+                ContactsContract.Contacts.openContactPhotoInputStream(resolver, lookupUri, true)
+                    ?.use(BitmapFactory::decodeStream)
+            }.getOrNull()
+        } else {
+            null
+        }
+
+        val bitmap = directPhoto ?: lookupPhoto ?: return ""
+        return bitmapToBase64(bitmap)
+    }
+
+    private fun bitmapToBase64(bitmap: Bitmap): String {
+        val scaled = Bitmap.createScaledBitmap(bitmap, 128, 128, true)
+        val bytes = ByteArrayOutputStream()
+        scaled.compress(Bitmap.CompressFormat.PNG, 100, bytes)
+        if (scaled !== bitmap) {
+            scaled.recycle()
+        }
+        return Base64.encodeToString(bytes.toByteArray(), Base64.NO_WRAP)
+    }
+
+    private fun resolvePrimaryNumberForContact(contactId: Long): String {
+        val resolver = getApplication<Application>().contentResolver
+        val projection = arrayOf(
+            ContactsContract.CommonDataKinds.Phone.NUMBER
+        )
+        val selection = "${ContactsContract.CommonDataKinds.Phone.CONTACT_ID}=?"
+        val args = arrayOf(contactId.toString())
+        return runCatching {
+            resolver.query(
+                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                projection,
+                selection,
+                args,
+                null
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val index = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                    if (index >= 0) cursor.getString(index).orEmpty() else ""
+                } else {
+                    ""
+                }
+            }.orEmpty()
+        }.getOrDefault("")
+    }
+
+    private fun persistContactState(
+        selectedContact: CallContact?,
+        pinned: List<CallContact>,
+        recent: List<CallContact>
+    ) {
+        prefs.edit()
+            .putString(KEY_SELECTED_CONTACT, serializeContact(selectedContact))
+            .putString(KEY_PINNED_CONTACTS, serializeContactList(pinned))
+            .putString(KEY_RECENT_CONTACTS, serializeContactList(recent))
+            .apply()
+    }
+
+    private fun pruneRecentContacts(
+        recentContacts: List<CallContact>,
+        pinnedContacts: List<CallContact>
+    ): List<CallContact> {
+        val limit = if (pinnedContacts.isNotEmpty()) 1 else 3
+        val deduped = buildList {
+            recentContacts.forEach { contact ->
+                if (none { existing -> sameContact(existing, contact) }) {
+                    add(contact)
+                }
+            }
+        }
+        return deduped
+            .filterNot { recent -> pinnedContacts.any { sameContact(it, recent) } }
+            .takeLast(limit)
+    }
+
+    private fun sameContact(a: CallContact, b: CallContact): Boolean {
+        return if (a.id > 0 && b.id > 0) a.id == b.id else a.phoneNumber == b.phoneNumber
+    }
+
+    private fun serializeContact(contact: CallContact?): String {
+        if (contact == null) return ""
+        return JSONObject().apply {
+            put("id", contact.id)
+            put("name", contact.displayName)
+            put("number", contact.phoneNumber)
+            put("photoUri", contact.photoUri)
+            put("avatarBase64", contact.avatarBase64)
+        }.toString()
+    }
+
+    private fun parseContact(raw: String): CallContact? {
+        if (raw.isBlank()) return null
+        return runCatching {
+            val obj = JSONObject(raw)
+            val number = obj.optString("number").orEmpty()
+            if (number.isBlank()) return@runCatching null
+            CallContact(
+                id = obj.optLong("id", 0L),
+                displayName = obj.optString("name").orEmpty().ifBlank { number },
+                phoneNumber = number,
+                photoUri = obj.optString("photoUri").orEmpty(),
+                avatarBase64 = obj.optString("avatarBase64").orEmpty()
+            )
+        }.getOrNull()
+    }
+
+    private fun serializeContactList(contacts: List<CallContact>): String {
+        return JSONArray().apply {
+            contacts.forEach { contact ->
+                put(
+                    JSONObject().apply {
+                        put("id", contact.id)
+                        put("name", contact.displayName)
+                        put("number", contact.phoneNumber)
+                        put("photoUri", contact.photoUri)
+                        put("avatarBase64", contact.avatarBase64)
+                    }
+                )
+            }
+        }.toString()
+    }
+
+    private fun parseContactList(raw: String): List<CallContact> {
+        if (raw.isBlank()) return emptyList()
+        return runCatching {
+            val array = JSONArray(raw)
+            buildList {
+                for (index in 0 until array.length()) {
+                    val obj = array.optJSONObject(index) ?: continue
+                    val number = obj.optString("number").orEmpty().trim()
+                    if (number.isBlank()) continue
+                    add(
+                        CallContact(
+                            id = obj.optLong("id", 0L),
+                            displayName = obj.optString("name").orEmpty().ifBlank { number },
+                            phoneNumber = number,
+                            photoUri = obj.optString("photoUri").orEmpty(),
+                            avatarBase64 = obj.optString("avatarBase64").orEmpty()
+                        )
+                    )
+                }
+            }
+        }.getOrDefault(emptyList())
+    }
+
     companion object {
         private const val PREFS_NAME = "fake_call_prefs"
         private const val KEY_PROVIDER_NAME = "provider_name"
         private const val KEY_CALLER_NAME = "caller_name"
         private const val KEY_CALLER_NUMBER = "caller_number"
+        private const val KEY_CALLER_INPUT_MODE = "caller_input_mode"
+        private const val KEY_SELECTED_CONTACT = "selected_contact"
+        private const val KEY_PINNED_CONTACTS = "pinned_contacts"
+        private const val KEY_RECENT_CONTACTS = "recent_contacts"
         private const val KEY_DELAY_SECONDS = "delay_seconds"
         private const val KEY_SCHEDULE_KIND = "schedule_kind"
         private const val KEY_CUSTOM_COUNTDOWN_MINUTES = "custom_countdown_minutes"
@@ -1002,6 +1410,8 @@ class FakeCallViewModel(application: Application) : AndroidViewModel(application
         private const val KEY_MP3_IVR_FOLDER_NAME = "mp3_ivr_folder_name"
         private const val KEY_ONBOARDING_COMPLETE = "onboarding_complete"
         private const val KEY_QUICK_TRIGGER_PRESET_NAME = "quick_trigger_preset_name"
+        private const val MAX_RECENT_CONTACTS = 12
+        private const val MAX_PINNED_CONTACTS = 8
 
         fun formatDelay(context: Context, seconds: Int): String {
             return DelayFormatter.formatLong(context, seconds)

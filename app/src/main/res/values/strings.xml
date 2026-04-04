@@ -156,8 +156,15 @@
 
     <!-- Components -->
     <string name="caller_details_title">Caller Details</string>
+    <string name="caller_mode_manual">Name + number</string>
+    <string name="caller_mode_contact">Contact</string>
     <string name="label_caller_name">Caller name</string>
     <string name="label_caller_number">Caller number</string>
+    <string name="action_select_contact">Select contact</string>
+    <string name="selected_short">Selected</string>
+    <string name="selected_contact_title">Selected contact</string>
+    <string name="pinned_contacts_title">Pinned contacts</string>
+    <string name="recent_contacts_title">Recent contacts</string>
     <string name="hint_shown_on_incoming_call">Shown on the incoming call screen.</string>
     <string name="timing_title">Timing</string>
     <string name="label_saved_presets">Saved presets</string>
@@ -245,6 +252,8 @@
     <string name="status_grant_permissions_scheduling">Grant phone permissions before scheduling.</string>
     <string name="status_enable_calling_accounts">Enable this app in system Calling Accounts first.</string>
     <string name="status_enter_caller_number_scheduling">Enter a caller number before scheduling.</string>
+    <string name="status_select_contact_scheduling">Select a contact before scheduling.</string>
+    <string name="status_contact_pick_failed">Could not read this contact. Please select another one.</string>
     <string name="status_triggering_now">Triggering incoming call now.</string>
     <string name="status_trigger_failed">Could not trigger call. Enable provider in Calling Accounts.</string>
     <string name="status_enable_exact_alarms">Enable exact alarms to schedule precise calls.</string>

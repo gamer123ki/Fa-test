@@ -151,8 +151,15 @@
     <string name="action_add">Hinzufügen</string>
     <!-- Components -->
     <string name="caller_details_title">Anruferdetails</string>
+    <string name="caller_mode_manual">Name + Nummer</string>
+    <string name="caller_mode_contact">Kontakt</string>
     <string name="label_caller_name">Anrufername</string>
     <string name="label_caller_number">Anrufernummer</string>
+    <string name="action_select_contact">Kontakt auswählen</string>
+    <string name="selected_short">Ausgewählt</string>
+    <string name="selected_contact_title">Ausgewählter Kontakt</string>
+    <string name="pinned_contacts_title">Angeheftete Kontakte</string>
+    <string name="recent_contacts_title">Zuletzt verwendet</string>
     <string name="hint_shown_on_incoming_call">Wird auf dem eingehenden Anrufbildschirm angezeigt.</string>
     <string name="timing_title">Zeitplanung</string>
     <string name="label_saved_presets">Gespeicherte Voreinstellungen</string>
@@ -232,6 +239,8 @@
     <string name="status_grant_permissions_scheduling">Erteile Telefonberechtigungen vor der Planung.</string>
     <string name="status_enable_calling_accounts">Aktiviere diese App zuerst in den systemweiten Anrufkonten.</string>
     <string name="status_enter_caller_number_scheduling">Gib eine Anrufernummer ein, bevor du planst.</string>
+    <string name="status_select_contact_scheduling">Wähle einen Kontakt aus, bevor du planst.</string>
+    <string name="status_contact_pick_failed">Dieser Kontakt konnte nicht gelesen werden. Bitte wähle einen anderen.</string>
     <string name="status_triggering_now">Eingehender Anruf wird jetzt ausgelöst.</string>
     <string name="status_trigger_failed">Anruf konnte nicht ausgelöst werden. Aktiviere den Anbieter in den Anrufkonten.</string>
     <string name="status_enable_exact_alarms">Aktiviere präzise Alarme, um zeitgenaue Anrufe zu planen.</string>
