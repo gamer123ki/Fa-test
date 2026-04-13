@@ -12,6 +12,8 @@ import android.media.MediaRecorder
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.telecom.CallAudioState
@@ -48,6 +50,13 @@ class FakeConnection(
     private var pendingTtsMessage: String? = null
     private val folderNavStack = mutableListOf<FolderNavState>()
 
+    // ✅ FIX: Auto-end handler — call will ring for 28 seconds then auto-disconnect
+    private val autoEndHandler = Handler(Looper.getMainLooper())
+    private val autoEndRunnable = Runnable {
+        Log.i(TAG, "Auto-ending call after ringing timeout.")
+        disconnectWithCause(DisconnectCause.MISSED)
+    }
+
     init {
         val displayName = callerName.ifBlank { callerNumber }
         setAddress(Uri.fromParts(PhoneAccount.SCHEME_TEL, callerNumber, null), TelecomManager.PRESENTATION_ALLOWED)
@@ -56,15 +65,19 @@ class FakeConnection(
         setAudioModeIsVoip(true)
         setInitializing()
         setRinging()
+
+        // ✅ FIX: Schedule auto-end after 28 seconds of ringing (like a real missed call)
+        autoEndHandler.postDelayed(autoEndRunnable, AUTO_END_DELAY_MS)
     }
 
     override fun onAnswer() {
+        // ✅ FIX: Cancel auto-end when user answers
+        autoEndHandler.removeCallbacks(autoEndRunnable)
         setActive()
         runCatching {
             audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
         }
         runCatching {
-            // Start on earpiece, but allow system UI to switch routes afterward.
             setAudioRoute(CallAudioState.ROUTE_EARPIECE)
             audioManager.isSpeakerphoneOn = false
             runCatching { audioManager.stopBluetoothSco() }
@@ -75,25 +88,29 @@ class FakeConnection(
     }
 
     override fun onReject() {
+        // ✅ FIX: Cancel auto-end on manual reject too
+        autoEndHandler.removeCallbacks(autoEndRunnable)
         disconnectWithCause(DisconnectCause.REJECTED)
     }
 
     override fun onDisconnect() {
+        // ✅ FIX: Cancel auto-end on manual disconnect
+        autoEndHandler.removeCallbacks(autoEndRunnable)
         disconnectWithCause(DisconnectCause.LOCAL)
     }
 
     override fun onAbort() {
+        // ✅ FIX: Cancel auto-end on abort
+        autoEndHandler.removeCallbacks(autoEndRunnable)
         disconnectWithCause(DisconnectCause.CANCELED)
     }
 
     override fun onCallAudioStateChanged(state: CallAudioState) {
         super.onCallAudioStateChanged(state)
         runCatching {
-            // Keep the mic live while we are actively recording to avoid unexpected dropouts.
             audioManager.isMicrophoneMute = if (mediaRecorder != null) false else state.isMuted
         }
         runCatching {
-            // Respect the system route (earpiece vs. speaker) so the phone app toggle works.
             audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
             applyAudioRoute(state.route)
         }
@@ -117,7 +134,6 @@ class FakeConnection(
                 audioManager.isSpeakerphoneOn = true
             }
             else -> {
-                // Default to earpiece.
                 runCatching { audioManager.stopBluetoothSco() }
                 runCatching { audioManager.isBluetoothScoOn = false }
                 audioManager.isSpeakerphoneOn = false
@@ -141,6 +157,8 @@ class FakeConnection(
     }
 
     private fun disconnectWithCause(code: Int) {
+        // ✅ FIX: Always cancel the auto-end timer on any disconnect
+        autoEndHandler.removeCallbacks(autoEndRunnable)
         stopAndReleasePlayer()
         shutdownTts()
         folderNavStack.clear()
@@ -478,7 +496,6 @@ class FakeConnection(
             }
 
             recorder.apply {
-                // MIC is more stable for continuous capture during self-managed calls.
                 setAudioSource(MediaRecorder.AudioSource.MIC)
                 setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
                 setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
@@ -692,6 +709,9 @@ class FakeConnection(
         private const val KEY_MP3_IVR_FOLDER_URI = "mp3_ivr_folder_uri"
         private const val KEY_MP3_IVR_FOLDER_NAME = "mp3_ivr_folder_name"
         private const val FOLDER_PAGE_SIZE = 9
+
+        // ✅ FIX: 28 seconds — feels like a real missed call (change to your liking)
+        private const val AUTO_END_DELAY_MS = 28_000L
     }
 
     private fun finalizeRecordingDestination(stoppedCleanly: Boolean) {
