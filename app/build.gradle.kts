@@ -13,7 +13,7 @@ android {
         applicationId = "com.upnp.fakeCall"
         minSdk = 24
         targetSdk = 36
-        versionCode = 2
+        versionCode = 22
         versionName = "2.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

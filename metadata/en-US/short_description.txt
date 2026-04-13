@@ -1,0 +1,1 @@
+An open-source Android application to simulate incoming calls, featuring a modern Material 3 UI with dynamic Monet support.
